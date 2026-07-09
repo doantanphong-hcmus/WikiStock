@@ -1,14 +1,14 @@
 # WikiStock API Contract (V1)
 
-Tài liệu này quy định hợp đồng giao tiếp (API Contract) giữa các services trong hệ thống WikiStock (chủ yếu giữa **Frontend ↔ Backend (NestJS)** và **Backend (NestJS) ↔ AI Service (FastAPI)**).
+Tài liệu này quy định API Contract giữa các services trong hệ thống WikiStock (chủ yếu giữa **Frontend ↔ Backend** và **Backend↔ AI Service**).
 
 ---
 
-## 1. Tiêu chuẩn chung (General Standards)
+## 1. Tiêu chuẩn chung 
 
-Mọi API response (ngoại trừ file download hoặc stream) đều phải trả về với HTTP Status 200 (nếu xử lý thành công) hoặc 400/500 (nếu có lỗi hệ thống), và tuân theo cấu trúc JSON gốc (Envelope) sau:
+Mọi API response (ngoại trừ file download hoặc stream) đều phải trả về với HTTP Status 200 (nếu xử lý thành công) hoặc 400/500 (nếu có lỗi hệ thống), và tuân theo cấu trúc JSON gốc sau:
 
-### 1.1. Cấu trúc Trả về Thành công (Success Response)
+### 1.1. Cấu trúc Trả về Success Response
 ```json
 {
   "statusCode": 200,
@@ -18,7 +18,7 @@ Mọi API response (ngoại trừ file download hoặc stream) đều phải tr�
 }
 ```
 
-### 1.2. Cấu trúc Trả về Lỗi (Error Response)
+### 1.2. Cấu trúc Trả về Error Response
 ```json
 {
   "statusCode": 400, // 400, 401, 403, 404, 500
@@ -39,9 +39,9 @@ Mọi API response (ngoại trừ file download hoặc stream) đều phải tr�
 
 ## 2. API Giao tiếp Nội bộ (Backend ↔ AI Service)
 
-API này do **FastAPI (AI Service)** cung cấp. NestJS sẽ gọi sang API này để lấy kết quả phân tích AI.
+API này do **FastAPI** cung cấp. NestJS sẽ gọi sang API này để lấy kết quả phân tích AI.
 
-### 2.1. Yêu cầu AI Phân tích (AI Analyst)
+### 2.1. Yêu cầu AI Phân tích
 *   **Endpoint:** `POST /api/v1/internal/ai/ask`
 *   **Mô tả:** Xử lý luồng RAG, tìm kiếm tài liệu, và trả về câu trả lời có trích dẫn.
 
@@ -98,9 +98,9 @@ API này do **FastAPI (AI Service)** cung cấp. NestJS sẽ gọi sang API này
 
 ## 3. API Giao tiếp Hệ thống (Frontend ↔ Backend)
 
-API này do **NestJS (Backend)** cung cấp cho Web App (Next.js) hiển thị dữ liệu.
+API này do **NestJS** cung cấp cho Web App (Next.js) hiển thị dữ liệu.
 
-### 3.1. Lấy thông tin cơ bản Doanh nghiệp (Company Profile)
+### 3.1. Lấy thông tin cơ bản Doanh nghiệp (hỗ trợ Module Company Profile)
 *   **Endpoint:** `GET /api/v1/companies/:companyCode/profile`
 *   **Mô tả:** Trả về hồ sơ doanh nghiệp (ngành nghề, vốn, thông tin niêm yết).
 
@@ -122,7 +122,7 @@ API này do **NestJS (Backend)** cung cấp cho Web App (Next.js) hiển thị d
 }
 ```
 
-### 3.2. Lấy dữ liệu tài chính chuẩn hóa (Financial Data)
+### 3.2. Lấy dữ liệu tài chính chuẩn hóa 
 *   **Endpoint:** `GET /api/v1/companies/:companyCode/financials?year=2025&quarter=4`
 *   **Mô tả:** Lấy dữ liệu bảng cân đối, kết quả kinh doanh.
 
