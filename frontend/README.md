@@ -1,31 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WikiStock Frontend
 
-## Getting Started
+Next.js App Router skeleton for the WikiStock MVP.
 
-First, run the development server:
+## Local Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` from `.env.example` when you need to override the backend URL.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Local Development Ports
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001/api
+- Backend API v1: http://localhost:3001/api/v1
+- AI service: http://localhost:8000
 
-## Learn More
+## Routes
 
-To learn more about Next.js, take a look at the following resources:
+- `/`
+- `/search`
+- `/companies/FPT`
+- `/companies/FPT/financials`
+- `/companies/FPT/ai`
+- `/companies/FPT/risk`
+- `/admin`
+- `/login`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Frontend calls the backend through `NEXT_PUBLIC_API_BASE_URL`; it does not call ai-service directly.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 

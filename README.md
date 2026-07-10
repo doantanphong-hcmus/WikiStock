@@ -30,7 +30,33 @@ WikiStock/
 ├── frontend/           # Next.js, React, TailwindCSS (Giao diện Web App)
 ├── backend/            # NestJS, TypeScript (Cổng API nghiệp vụ, xác thực)
 ├── ai-service/         # Python, FastAPI, LangChain (Luồng xử lý AI & RAG)
-├── crawler/            # Python (Script thu thập và làm sạch dữ liệu tự động)
 ├── .gitignore          # Ẩn các file environment và dependencies
 └── README.md           # Tài liệu dự án (bạn đang đọc file này)
+```
+
+## Local Development Ports
+
+- Frontend: http://localhost:3000
+- Backend health: http://localhost:3001/api/health
+- Backend API v1: http://localhost:3001/api/v1
+- AI service: http://localhost:8000
+
+## Chạy Local Skeleton
+
+```bash
+cd backend
+npm install
+npm run start:dev
+```
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+```bash
+cd ai-service
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```

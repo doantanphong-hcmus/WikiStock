@@ -15,8 +15,16 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return an API envelope', () => {
+      expect(appController.getHello()).toEqual({
+        statusCode: 200,
+        message: 'WikiStock API gateway',
+        data: {
+          name: 'WikiStock Backend',
+          status: 'ok',
+        },
+        error: null,
+      });
     });
   });
 });
