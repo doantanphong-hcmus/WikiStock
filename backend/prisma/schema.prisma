@@ -1,0 +1,150 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// -------------------------------------------------------------
+// USER & AUTHENTICATION
+// -------------------------------------------------------------
+model AppUser {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  fullName     String    @map("full_name")
+  roleId       Int       @map("role_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  conversations AiConversation[]
+
+  @@map("app_user")
+}
+
+// -------------------------------------------------------------
+// COMPANY KNOWLEDGE
+// -------------------------------------------------------------
+model Company {
+  companyCode    String   @id @map("company_code")
+  name           String
+  exchangeId     Int      @map("exchange_id")
+  industryId     Int      @map("industry_id")
+  charterCapital BigInt?  @map("charter_capital")
+  description    String?
+  website        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  financialReports FinancialReport[]
+  newsArticles     NewsArticleCompany[]
+  riskScores       RiskScore[]
+
+  @@map("company")
+}
+
+// -------------------------------------------------------------
+// FINANCIAL CENTER
+// -------------------------------------------------------------
+model FinancialReport {
+  id          Int      @id @default(autoincrement())
+  companyCode String   @map("company_code")
+  year        Int
+  quarter     Int
+  reportType  String   @map("report_type") // BalanceSheet, IncomeStatement, CashFlow
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company    Company             @relation(fields: [companyCode], references: [companyCode])
+  lineItems  FinancialLineItem[]
+
+  @@unique([companyCode, year, quarter, reportType])
+  @@map("financial_report")
+}
+
+model FinancialLineItem {
+  id         Int     @id @default(autoincrement())
+  reportId   Int     @map("report_id")
+  metricId   Int     @map("metric_id")
+  value      BigInt
+  
+  report     FinancialReport @relation(fields: [reportId], references: [id])
+
+  @@unique([reportId, metricId])
+  @@map("financial_line_item")
+}
+
+// -------------------------------------------------------------
+// RISK CENTER
+// -------------------------------------------------------------
+model RiskScore {
+  id          Int      @id @default(autoincrement())
+  companyCode String   @map("company_code")
+  score       Int
+  riskLevel   String   @map("risk_level") // AN_TOAN, CHU_Y, CANH_BAO
+  calculatedAt DateTime @default(now()) @map("calculated_at")
+
+  company     Company  @relation(fields: [companyCode], references: [companyCode])
+
+  @@map("risk_score")
+}
+
+// -------------------------------------------------------------
+// NEWS INTELLIGENCE
+// -------------------------------------------------------------
+model NewsArticle {
+  id          Int      @id @default(autoincrement())
+  title       String
+  url         String   @unique
+  publishedAt DateTime @map("published_at")
+  
+  companies   NewsArticleCompany[]
+
+  @@map("news_article")
+}
+
+model NewsArticleCompany {
+  newsId      Int      @map("news_id")
+  companyCode String   @map("company_code")
+  
+  news        NewsArticle @relation(fields: [newsId], references: [id])
+  company     Company     @relation(fields: [companyCode], references: [companyCode])
+
+  @@id([newsId, companyCode])
+  @@map("news_article_company")
+}
+
+// -------------------------------------------------------------
+// AI & CITATIONS
+// -------------------------------------------------------------
+model AiConversation {
+  id          String   @id @default(uuid())
+  userId      Int      @map("user_id")
+  title       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        AppUser  @relation(fields: [userId], references: [id])
+  messages    AiMessage[]
+
+  @@map("ai_conversation")
+}
+
+model AiMessage {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  role           String   // user, assistant
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation   AiConversation @relation(fields: [conversationId], references: [id])
+
+  @@map("ai_message")
+}

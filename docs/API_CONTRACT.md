@@ -143,4 +143,113 @@ API này do **NestJS** cung cấp cho Web App (Next.js) hiển thị dữ liệu
   },
   "error": null
 }
+
+### 3.3. Lấy Lịch sử Dữ liệu Tài chính (Biểu đồ)
+*   **Endpoint:** `GET /api/v1/companies/:companyCode/financials/history?quarters=4`
+*   **Mô tả:** Trả về mảng dữ liệu tài chính của nhiều quý liên tiếp để vẽ biểu đồ "Hiệu quả kinh doanh".
+
+**Response Payload:**
+```json
+{
+  "statusCode": 200,
+  "message": "Fetched financial history",
+  "data": [
+    { "quarter": "Q1/2025", "revenue": 45000000000, "netProfit": 7000000000 },
+    { "quarter": "Q2/2025", "revenue": 48000000000, "netProfit": 7500000000 },
+    { "quarter": "Q3/2025", "revenue": 49000000000, "netProfit": 7800000000 },
+    { "quarter": "Q4/2025", "revenue": 50000000000, "netProfit": 8000000000 }
+  ],
+  "error": null
+}
+```
+
+### 3.4. Lấy Điểm Rủi ro (Radar Cảnh báo)
+*   **Endpoint:** `GET /api/v1/companies/:companyCode/risk-score`
+*   **Mô tả:** Lấy mức độ rủi ro tổng thể và các tín hiệu cảnh báo.
+
+**Response Payload:**
+```json
+{
+  "statusCode": 200,
+  "message": "Fetched risk score",
+  "data": {
+    "companyCode": "FPT",
+    "riskLevel": "AN_TOAN", // AN_TOAN, CHU_Y, CANH_BAO
+    "score": 85,
+    "signals": [
+      {
+        "signalType": "Tăng trưởng doanh thu chậm",
+        "description": "Doanh thu Q4 tăng nhưng biên lợi nhuận giảm",
+        "severity": "LOW"
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+### 3.5. Lấy Tin tức Sự kiện
+*   **Endpoint:** `GET /api/v1/companies/:companyCode/news`
+*   **Mô tả:** Lấy danh sách tin tức liên quan đến công ty.
+
+**Response Payload:**
+```json
+{
+  "statusCode": 200,
+  "message": "Fetched news",
+  "data": [
+    {
+      "id": 1,
+      "title": "FPT lọt top công ty công nghệ lớn nhất",
+      "url": "https://...",
+      "publishedAt": "2025-10-15T10:00:00Z"
+    }
+  ],
+  "error": null
+}
+```
+
+---
+
+## 4. API Xác thực (Authentication)
+
+### 4.1. Đăng ký & Đăng nhập
+*   **Endpoints:** 
+    - `POST /api/v1/auth/register` (body: email, password, name)
+    - `POST /api/v1/auth/login` (body: email, password)
+*   **Mô tả:** Trả về JWT Token để truy cập các API yêu cầu xác thực.
+
+**Response Payload (Thành công):**
+```json
+{
+  "statusCode": 200,
+  "message": "Login successful",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUz...",
+    "user": {
+      "id": 1,
+      "name": "Thắng",
+      "email": "thang@wikistock.vn"
+    }
+  },
+  "error": null
+}
+```
+
+---
+
+## 5. API Trợ lý AI (Web-Facing)
+
+### 5.1. Hỏi đáp AI (Server-Sent Events)
+*   **Endpoint:** `GET /api/v1/chat/stream?query=Tạo_sao_chi_phí_tăng&companyCode=FPT`
+*   **Header Required:** `Authorization: Bearer <token>`
+*   **Mô tả:** API trả về luồng dữ liệu (Stream) dạng `text/event-stream` để Frontend làm hiệu ứng gõ chữ (typing). Dữ liệu cuối cùng của stream sẽ kèm theo Citations.
+
+**Định dạng Data Stream (SSE):**
+```text
+data: {"chunk": "Trong năm 2025,"}
+data: {"chunk": " chi phí quản lý của FPT đạt 3.500 tỷ..."}
+data: {"citations": [{"docTitle": "BCTC Q4", "pageNumber": 24}]}
+data: [DONE]
+```
 ```
