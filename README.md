@@ -43,6 +43,19 @@ WikiStock/
 
 ## Chạy Local Skeleton
 
+Toàn bộ stack:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+```bash
+docker compose down
+```
+
+Chạy từng service ngoài Docker:
+
 ```bash
 cd backend
 npm install
