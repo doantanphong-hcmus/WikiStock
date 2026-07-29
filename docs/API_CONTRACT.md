@@ -77,12 +77,9 @@ Quy định:
     "answer": "FPT duy trì tăng trưởng doanh thu nhờ mảng dịch vụ công nghệ.",
     "isConfident": true,
     "limitations": null,
-    "citations": [
+    "evidence": [
       {
-        "citationId": 1,
         "documentId": 1,
-        "docTitle": "Báo cáo tài chính kiểm toán hợp nhất 2025",
-        "sourceUrl": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
         "locationRef": "Trang 24",
         "excerpt": "Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ."
       }
@@ -92,7 +89,17 @@ Quy định:
 }
 ```
 
-Khi thiếu dữ liệu, AI phải trả lời không đủ dữ liệu và để `citations` là mảng rỗng.
+`evidence` là kết quả retrieval nội bộ. AI Service không tự tạo `citationId`,
+`docTitle` hoặc `sourceUrl`; Backend xác thực `documentId` và chuẩn hóa evidence
+thành public citation.
+
+Khi thiếu dữ liệu, AI phải trả lời không đủ dữ liệu, đặt `isConfident` là
+`false` và để `evidence` là mảng rỗng. Một câu trả lời có `isConfident=true`
+bắt buộc phải có ít nhất một evidence hợp lệ.
+
+Nếu evidence sai cấu trúc hoặc không trỏ tới nguồn đã biết, Backend trả HTTP
+`502` với error code `AI_INVALID_EVIDENCE`; không chuyển tiếp answer thiếu
+nguồn và không thay bằng citation giả.
 
 ---
 
@@ -341,6 +348,30 @@ Request:
 }
 ```
 
-Response dùng cùng shape với mục **2.1**.
+Response dùng public citation contract sau khi Backend đã xác thực và chuẩn hóa
+`evidence` từ mục **2.1**:
+
+```json
+{
+  "statusCode": 200,
+  "message": "AI Generated Answer Successfully",
+  "data": {
+    "answer": "FPT duy trì tăng trưởng doanh thu nhờ mảng dịch vụ công nghệ.",
+    "isConfident": true,
+    "limitations": null,
+    "citations": [
+      {
+        "citationId": 1,
+        "documentId": 1,
+        "docTitle": "Báo cáo tài chính kiểm toán hợp nhất 2025",
+        "sourceUrl": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
+        "locationRef": "Trang 24",
+        "excerpt": "Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ."
+      }
+    ]
+  },
+  "error": null
+}
+```
 
 SSE endpoint `GET /api/v1/chat/stream` vẫn là mục tiêu sau, chưa phải endpoint chính trong skeleton hiện tại.
