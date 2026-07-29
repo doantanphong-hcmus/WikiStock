@@ -21,19 +21,17 @@ class AskRequest(BaseModel):
     conversationId: str | None = None
 
 
-class Citation(BaseModel):
-    id: str
-    docTitle: str
-    sourceUrl: str
-    pageNumber: int
-    matchedText: str
+class Evidence(BaseModel):
+    documentId: int
+    locationRef: str | None = None
+    excerpt: str
 
 
 class AskData(BaseModel):
     answer: str
     isConfident: bool
-    citations: list[Citation] = Field(default_factory=list)
-    limitations: str
+    evidence: list[Evidence] = Field(default_factory=list)
+    limitations: str | None = None
 
 
 def build_demo_answer(payload: AskRequest) -> AskData:
@@ -46,7 +44,7 @@ def build_demo_answer(payload: AskRequest) -> AskData:
             'RAG pipeline and vector search are not connected in this skeleton.'
         ),
         isConfident=False,
-        citations=[],
+        evidence=[],
         limitations='Local ai-service skeleton only; no real model, database, or vector store is connected.',
     )
 
