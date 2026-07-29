@@ -32,7 +32,7 @@ WikiStock/
 ├── crawler/         # Thu thập, parse, làm sạch và nạp dữ liệu
 ├── docs/            # Tài liệu dự án, API contract, quy chuẩn
 ├── schema.sql       # Nguồn chuẩn tuyệt đối của database
-└── docker_compose.yml
+└── compose.yaml
 ```
 
 Quy định:
