@@ -13,8 +13,8 @@ export class CompaniesService {
     };
   }
 
-  findByCompanyCode(companyCode: string): ApiResponse<CompanyProfile> {
-    const company = findMockCompany(companyCode);
+  findByCompanyCode(ticker: string): ApiResponse<CompanyProfile> {
+    const company = findMockCompany(ticker);
 
     if (!company) {
       throw new NotFoundException({
@@ -23,7 +23,7 @@ export class CompaniesService {
         data: null,
         error: {
           code: 'COMPANY_NOT_FOUND',
-          details: `Company ${companyCode} is not available in mock data`,
+          details: `Company ${ticker} is not available in mock data`,
         },
       });
     }

@@ -13,18 +13,18 @@ export function CompanyHeader({ company }: { company: Company }) {
               {company.ticker}
             </span>
             <span className="rounded-md border border-zinc-300 px-3 py-1 text-sm text-zinc-600">
-              {company.exchange}
+              {company.exchange.exchangeCode}
             </span>
             <span className="rounded-md border border-zinc-300 px-3 py-1 text-sm text-zinc-600">
-              {company.industry}
+              {company.industry.industryName}
             </span>
           </div>
           <div>
             <h1 className="text-3xl font-semibold tracking-normal text-zinc-950">
-              {company.name}
+              {company.companyName}
             </h1>
             <p className="mt-2 max-w-3xl text-base leading-7 text-zinc-600">
-              {company.summary}
+              {company.description}
             </p>
           </div>
         </div>

@@ -35,7 +35,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const results = keyword
     ? companies.filter((company) =>
-        [company.ticker, company.name, company.industry]
+        [company.ticker, company.companyName, company.industry.industryName]
           .join(" ")
           .toUpperCase()
           .includes(keyword),
@@ -76,12 +76,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <span className="rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white">
                   {company.ticker}
                 </span>
-                <span className="text-sm text-zinc-500">{company.exchange}</span>
+                <span className="text-sm text-zinc-500">
+                  {company.exchange.exchangeCode}
+                </span>
               </div>
               <h2 className="mt-3 text-lg font-semibold text-zinc-950">
-                {company.name}
+                {company.companyName}
               </h2>
-              <p className="mt-2 text-sm text-zinc-600">{company.summary}</p>
+              <p className="mt-2 text-sm text-zinc-600">{company.description}</p>
             </Link>
           ))}
         </div>

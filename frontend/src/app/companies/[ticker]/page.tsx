@@ -49,9 +49,9 @@ export default async function CompanyPage({ params }: PageProps) {
           <h2 className="text-lg font-semibold text-zinc-950">Documents</h2>
           <ul className="mt-4 space-y-3">
             {documents.map((document) => (
-              <li key={document.id} className="rounded-md border border-zinc-200 p-3">
+              <li key={document.documentId} className="rounded-md border border-zinc-200 p-3">
                 <a
-                  href={document.sourceUrl}
+                  href={document.url}
                   target="_blank"
                   rel="noreferrer"
                   className="text-sm font-medium text-emerald-800"
@@ -59,7 +59,7 @@ export default async function CompanyPage({ params }: PageProps) {
                   {document.title}
                 </a>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {document.type} - {document.year}
+                  {document.documentType.typeName} - {document.publishedDate ?? "N/A"}
                 </p>
               </li>
             ))}
@@ -70,15 +70,15 @@ export default async function CompanyPage({ params }: PageProps) {
           <h2 className="text-lg font-semibold text-zinc-950">Citations</h2>
           <ul className="mt-4 space-y-3">
             {citations.map((citation) => (
-              <li key={citation.id} className="rounded-md border border-zinc-200 p-3">
+              <li key={citation.citationId} className="rounded-md border border-zinc-200 p-3">
                 <p className="text-sm font-medium text-zinc-950">
                   {citation.docTitle}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Trang {citation.pageNumber}
-                </p>
+                {citation.locationRef ? (
+                  <p className="mt-1 text-xs text-zinc-500">{citation.locationRef}</p>
+                ) : null}
                 <p className="mt-2 text-sm text-zinc-600">
-                  {citation.matchedText}
+                  {citation.excerpt}
                 </p>
               </li>
             ))}

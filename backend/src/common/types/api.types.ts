@@ -8,52 +8,99 @@ export interface ApiResponse<T> {
   } | null;
 }
 
+export interface ExchangeSummary {
+  exchangeId: number;
+  exchangeCode: string;
+  exchangeName: string;
+}
+
+export interface IndustrySummary {
+  industryId: number;
+  industryCode: string;
+  industryName: string;
+}
+
+export interface CompanyExecutiveSummary {
+  executiveId: number;
+  fullName: string;
+  position: string;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 export interface CompanyProfile {
-  companyCode: string;
+  companyId: number;
   ticker: string;
-  name: string;
-  exchange: string;
-  industry: string;
-  summary: string;
-  description: string;
-  website: string;
-  ceo: string;
-  sources: string[];
+  companyName: string;
+  exchange: ExchangeSummary;
+  industry: IndustrySummary;
+  listingDate: string | null;
+  charterCapital: string | null;
+  website: string | null;
+  description: string | null;
+  executives: CompanyExecutiveSummary[];
   citations: Citation[];
 }
 
-export interface FinancialSummary {
-  companyCode: string;
-  year: number;
-  quarter: number;
-  revenue: number;
-  netProfit: number;
-  totalAssets: number;
-  liabilities: number;
-  equity: number;
+export interface MetricSummary {
+  metricId: number;
+  metricCode: string;
+  metricName: string;
+  unit: string;
+  statementType: string;
 }
 
-export interface FinancialMetric {
-  label: string;
-  value: number;
-  unit: string;
+export interface FinancialLineItemSummary {
+  lineItemId: number;
+  metric: MetricSummary;
+  value: string;
+}
+
+export interface FinancialSummary {
+  reportId: number;
+  companyId: number;
+  ticker: string;
+  periodType: 'Q' | 'Y';
+  fiscalYear: number;
+  fiscalQuarter: number | null;
+  reportDate: string | null;
+  lineItems: FinancialLineItemSummary[];
 }
 
 export interface Citation {
-  id: string;
+  citationId: number;
+  documentId: number;
   docTitle: string;
   sourceUrl: string;
-  pageNumber: number;
-  matchedText: string;
+  locationRef: string | null;
+  excerpt: string | null;
+}
+
+export interface DataSourceSummary {
+  sourceId: number;
+  sourceName: string;
+  sourceType: string;
+  reliabilityTier: number;
+  costTier: string;
+  accessUrl: string | null;
+}
+
+export interface DocumentTypeSummary {
+  docTypeId: number;
+  typeName: string;
 }
 
 export interface DocumentSummary {
-  id: string;
-  companyCode: string;
+  documentId: number;
+  companyId: number | null;
+  source: DataSourceSummary;
+  documentType: DocumentTypeSummary;
   title: string;
-  type: string;
-  year: number;
-  sourceUrl: string;
+  publishedDate: string | null;
+  url: string;
+  fileRef: string | null;
+  crawledAt: string;
+  checksum: string | null;
 }
 
 export interface AiAskFilters {
@@ -79,9 +126,9 @@ export interface AiAskResponse {
 }
 
 export interface AdminCompanyStatus {
-  companyCode: string;
+  companyId: number;
   ticker: string;
-  name: string;
+  companyName: string;
   dataStatus: string;
   sourceStatus: string;
   lastUpdated: string;

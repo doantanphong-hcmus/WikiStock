@@ -5,32 +5,66 @@ import {
   FinancialSummary,
 } from '../types/api.types';
 
+const hoseExchange = {
+  exchangeId: 1,
+  exchangeCode: 'HOSE',
+  exchangeName: 'Sở Giao dịch Chứng khoán TP. Hồ Chí Minh',
+};
+
+const technologyIndustry = {
+  industryId: 1,
+  industryCode: 'TECH',
+  industryName: 'Công nghệ thông tin',
+};
+
+const financialStatementType = {
+  docTypeId: 1,
+  typeName: 'financial_statement',
+};
+
+const annualReportType = {
+  docTypeId: 2,
+  typeName: 'annual_report',
+};
+
+const internalSource = {
+  sourceId: 1,
+  sourceName: 'WikiStock Demo Source',
+  sourceType: 'internal',
+  reliabilityTier: 3,
+  costTier: 'free',
+  accessUrl: 'https://wikistock.vn',
+};
+
 export const mockCitations: Record<string, Citation[]> = {
   FPT: [
     {
-      id: 'ref-fpt-01',
+      citationId: 1,
+      documentId: 1,
       docTitle: 'Báo cáo tài chính kiểm toán hợp nhất 2025',
       sourceUrl: 'https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf',
-      pageNumber: 24,
-      matchedText:
+      locationRef: 'Trang 24',
+      excerpt:
         'Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ.',
     },
     {
-      id: 'ref-fpt-02',
+      citationId: 2,
+      documentId: 2,
       docTitle: 'Báo cáo thường niên FPT 2025',
       sourceUrl: 'https://wikistock.vn/docs/fpt/annual-report-2025.pdf',
-      pageNumber: 8,
-      matchedText:
+      locationRef: 'Trang 8',
+      excerpt:
         'FPT duy trì định hướng tăng trưởng dựa trên chuyển đổi số và thị trường nước ngoài.',
     },
   ],
   CMG: [
     {
-      id: 'ref-cmg-01',
+      citationId: 3,
+      documentId: 3,
       docTitle: 'Báo cáo thường niên CMG 2025',
       sourceUrl: 'https://wikistock.vn/docs/cmg/annual-report-2025.pdf',
-      pageNumber: 12,
-      matchedText:
+      locationRef: 'Trang 12',
+      excerpt:
         'CMG tập trung vào hạ tầng số, dịch vụ đám mây và an toàn thông tin.',
     },
   ],
@@ -38,95 +72,231 @@ export const mockCitations: Record<string, Citation[]> = {
 
 export const mockCompanies: CompanyProfile[] = [
   {
+    companyId: 1,
     ticker: 'FPT',
-    companyCode: 'FPT',
-    name: 'Công ty Cổ phần FPT',
-    exchange: 'HOSE',
-    industry: 'Công nghệ thông tin',
+    companyName: 'Công ty Cổ phần FPT',
+    exchange: hoseExchange,
+    industry: technologyIndustry,
+    listingDate: '2006-12-13',
+    charterCapital: '14700000000000.00',
+    website: 'https://fpt.com',
     description:
       'Tập đoàn công nghệ hàng đầu Việt Nam với hoạt động trong lĩnh vực CNTT, viễn thông và dịch vụ số.',
-    website: 'https://fpt.com',
-    ceo: 'Nguyễn Văn Khoa',
-    summary:
-      'FPT là một trong những doanh nghiệp công nghệ hàng đầu tại Việt Nam.',
-    sources: ['Báo cáo tài chính 2025', 'Annual report 2025'],
+    executives: [
+      {
+        executiveId: 1,
+        fullName: 'Nguyễn Văn Khoa',
+        position: 'Tổng Giám đốc',
+        startDate: null,
+        endDate: null,
+      },
+    ],
     citations: mockCitations.FPT,
   },
   {
+    companyId: 2,
     ticker: 'CMG',
-    companyCode: 'CMG',
-    name: 'Công ty Cổ phần Tập đoàn Công nghệ CMC',
-    exchange: 'HOSE',
-    industry: 'Công nghệ thông tin',
+    companyName: 'Công ty Cổ phần Tập đoàn Công nghệ CMC',
+    exchange: hoseExchange,
+    industry: technologyIndustry,
+    listingDate: '2010-01-22',
+    charterCapital: '1500000000000.00',
+    website: 'https://cmg.vn',
     description:
       'Tập đoàn công nghệ Việt Nam hoạt động trong hạ tầng số, dịch vụ cloud, an toàn thông tin và tích hợp hệ thống.',
-    website: 'https://cmg.vn',
-    ceo: 'Nguyễn Trung Chính',
-    summary:
-      'CMG là doanh nghiệp công nghệ với trọng tâm hạ tầng số và dịch vụ doanh nghiệp.',
-    sources: ['Báo cáo thường niên 2025'],
+    executives: [
+      {
+        executiveId: 2,
+        fullName: 'Nguyễn Trung Chính',
+        position: 'Chủ tịch Hội đồng Quản trị',
+        startDate: null,
+        endDate: null,
+      },
+    ],
     citations: mockCitations.CMG,
   },
 ];
 
 export const mockFinancials: Record<string, FinancialSummary> = {
   FPT: {
-    companyCode: 'FPT',
-    year: 2025,
-    quarter: 4,
-    revenue: 50000000000,
-    netProfit: 8000000000,
-    totalAssets: 70000000000,
-    liabilities: 30000000000,
-    equity: 40000000000,
+    reportId: 1,
+    companyId: 1,
+    ticker: 'FPT',
+    periodType: 'Q',
+    fiscalYear: 2025,
+    fiscalQuarter: 4,
+    reportDate: '2026-01-26',
+    lineItems: [
+      {
+        lineItemId: 1,
+        metric: {
+          metricId: 1,
+          metricCode: 'REVENUE',
+          metricName: 'Doanh thu',
+          unit: 'VND',
+          statementType: 'income_statement',
+        },
+        value: '50000000000.0000',
+      },
+      {
+        lineItemId: 2,
+        metric: {
+          metricId: 2,
+          metricCode: 'NET_PROFIT',
+          metricName: 'Lợi nhuận sau thuế',
+          unit: 'VND',
+          statementType: 'income_statement',
+        },
+        value: '8000000000.0000',
+      },
+      {
+        lineItemId: 3,
+        metric: {
+          metricId: 3,
+          metricCode: 'TOTAL_ASSETS',
+          metricName: 'Tổng tài sản',
+          unit: 'VND',
+          statementType: 'balance_sheet',
+        },
+        value: '70000000000.0000',
+      },
+      {
+        lineItemId: 4,
+        metric: {
+          metricId: 4,
+          metricCode: 'LIABILITIES',
+          metricName: 'Nợ phải trả',
+          unit: 'VND',
+          statementType: 'balance_sheet',
+        },
+        value: '30000000000.0000',
+      },
+      {
+        lineItemId: 5,
+        metric: {
+          metricId: 5,
+          metricCode: 'EQUITY',
+          metricName: 'Vốn chủ sở hữu',
+          unit: 'VND',
+          statementType: 'balance_sheet',
+        },
+        value: '40000000000.0000',
+      },
+    ],
   },
   CMG: {
-    companyCode: 'CMG',
-    year: 2025,
-    quarter: 4,
-    revenue: 18000000000,
-    netProfit: 1200000000,
-    totalAssets: 26000000000,
-    liabilities: 11000000000,
-    equity: 15000000000,
+    reportId: 2,
+    companyId: 2,
+    ticker: 'CMG',
+    periodType: 'Q',
+    fiscalYear: 2025,
+    fiscalQuarter: 4,
+    reportDate: '2026-01-30',
+    lineItems: [
+      {
+        lineItemId: 6,
+        metric: {
+          metricId: 1,
+          metricCode: 'REVENUE',
+          metricName: 'Doanh thu',
+          unit: 'VND',
+          statementType: 'income_statement',
+        },
+        value: '18000000000.0000',
+      },
+      {
+        lineItemId: 7,
+        metric: {
+          metricId: 2,
+          metricCode: 'NET_PROFIT',
+          metricName: 'Lợi nhuận sau thuế',
+          unit: 'VND',
+          statementType: 'income_statement',
+        },
+        value: '1200000000.0000',
+      },
+      {
+        lineItemId: 8,
+        metric: {
+          metricId: 3,
+          metricCode: 'TOTAL_ASSETS',
+          metricName: 'Tổng tài sản',
+          unit: 'VND',
+          statementType: 'balance_sheet',
+        },
+        value: '26000000000.0000',
+      },
+      {
+        lineItemId: 9,
+        metric: {
+          metricId: 4,
+          metricCode: 'LIABILITIES',
+          metricName: 'Nợ phải trả',
+          unit: 'VND',
+          statementType: 'balance_sheet',
+        },
+        value: '11000000000.0000',
+      },
+      {
+        lineItemId: 10,
+        metric: {
+          metricId: 5,
+          metricCode: 'EQUITY',
+          metricName: 'Vốn chủ sở hữu',
+          unit: 'VND',
+          statementType: 'balance_sheet',
+        },
+        value: '15000000000.0000',
+      },
+    ],
   },
 };
 
 export const mockDocuments: Record<string, DocumentSummary[]> = {
   FPT: [
     {
-      id: 'doc-fpt-2025-fs',
-      companyCode: 'FPT',
+      documentId: 1,
+      companyId: 1,
+      source: internalSource,
+      documentType: financialStatementType,
       title: 'Báo cáo tài chính kiểm toán hợp nhất 2025',
-      type: 'financial_statement',
-      year: 2025,
-      sourceUrl: 'https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf',
+      publishedDate: '2026-01-26',
+      url: 'https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf',
+      fileRef: null,
+      crawledAt: '2026-07-09T00:00:00.000Z',
+      checksum: null,
     },
     {
-      id: 'doc-fpt-2025-ar',
-      companyCode: 'FPT',
+      documentId: 2,
+      companyId: 1,
+      source: internalSource,
+      documentType: annualReportType,
       title: 'Báo cáo thường niên FPT 2025',
-      type: 'annual_report',
-      year: 2025,
-      sourceUrl: 'https://wikistock.vn/docs/fpt/annual-report-2025.pdf',
+      publishedDate: '2026-03-31',
+      url: 'https://wikistock.vn/docs/fpt/annual-report-2025.pdf',
+      fileRef: null,
+      crawledAt: '2026-07-09T00:00:00.000Z',
+      checksum: null,
     },
   ],
   CMG: [
     {
-      id: 'doc-cmg-2025-ar',
-      companyCode: 'CMG',
+      documentId: 3,
+      companyId: 2,
+      source: internalSource,
+      documentType: annualReportType,
       title: 'Báo cáo thường niên CMG 2025',
-      type: 'annual_report',
-      year: 2025,
-      sourceUrl: 'https://wikistock.vn/docs/cmg/annual-report-2025.pdf',
+      publishedDate: '2026-03-31',
+      url: 'https://wikistock.vn/docs/cmg/annual-report-2025.pdf',
+      fileRef: null,
+      crawledAt: '2026-07-09T00:00:00.000Z',
+      checksum: null,
     },
   ],
 };
 
-export function findMockCompany(
-  companyCode: string,
-): CompanyProfile | undefined {
+export function findMockCompany(ticker: string): CompanyProfile | undefined {
   return mockCompanies.find(
-    (item) => item.companyCode.toUpperCase() === companyCode.toUpperCase(),
+    (item) => item.ticker.toUpperCase() === ticker.toUpperCase(),
   );
 }

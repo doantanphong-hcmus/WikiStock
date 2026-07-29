@@ -1,78 +1,90 @@
 # WikiStock API Contract (V1)
 
-Tài liệu này quy định API Contract giữa các services trong hệ thống WikiStock (chủ yếu giữa **Frontend ↔ Backend** và **Backend↔ AI Service**).
+Tài liệu này quy định API contract giữa các service trong hệ thống WikiStock, chủ yếu là **Frontend ↔ Backend** và **Backend ↔ AI Service**.
+
+Nguyên tắc hiện tại:
+
+- JSON response dùng `camelCase`.
+- Response shape đi gần `schema.sql` mới.
+- `ticker` là mã cổ phiếu hiển thị cho người dùng.
+- Các object danh mục như `exchange`, `industry`, `metric`, `source`, `documentType` được trả về dưới dạng object lồng nhau.
+- API vẫn có thể dùng route param tên `companyCode` trong V1 để giữ endpoint cũ, nhưng dữ liệu trả ra ưu tiên `ticker`, `companyId`, `companyName`.
 
 ---
 
-## 1. Tiêu chuẩn chung 
+## 1. Tiêu Chuẩn Chung
 
-Mọi API response (ngoại trừ file download hoặc stream) đều phải trả về với HTTP Status 200 (nếu xử lý thành công) hoặc 400/500 (nếu có lỗi hệ thống), và tuân theo cấu trúc JSON gốc sau:
+### 1.1. Success Response
 
-### 1.1. Cấu trúc Trả về Success Response
 ```json
 {
   "statusCode": 200,
-  "message": "Mô tả ngắn gọn kết quả (ví dụ: Success, Fetched)",
-  "data": { ... }, // Object hoặc Array dữ liệu
+  "message": "Fetched company profile",
+  "data": {},
   "error": null
 }
 ```
 
-### 1.2. Cấu trúc Trả về Error Response
+### 1.2. Error Response
+
 ```json
 {
-  "statusCode": 400, // 400, 401, 403, 404, 500
-  "message": "Mô tả lỗi cho người dùng cuối (ví dụ: Thiếu mã cổ phiếu)",
+  "statusCode": 404,
+  "message": "Company not found",
   "data": null,
   "error": {
-    "code": "VALIDATION_ERROR",
-    "details": "Chi tiết lỗi dành cho developer debug"
+    "code": "COMPANY_NOT_FOUND",
+    "details": "Company FPT is not available"
   }
 }
 ```
 
-> **Quy tắc:**
-> *   Dùng **camelCase** cho mọi key trong JSON.
-> *   Frontend chỉ check trường `statusCode` và `error` để biết request có thành công hay không.
+Quy định:
+
+- Frontend kiểm tra `statusCode` và `error`.
+- Không trả stack trace hoặc secret cho client.
+- Error code phải ổn định để frontend có thể xử lý.
 
 ---
 
-## 2. API Giao tiếp Nội bộ (Backend ↔ AI Service)
+## 2. Backend ↔ AI Service
 
-API này do **FastAPI** cung cấp. NestJS sẽ gọi sang API này để lấy kết quả phân tích AI.
+### 2.1. Yêu Cầu AI Phân Tích
 
-### 2.1. Yêu cầu AI Phân tích
-*   **Endpoint:** `POST /api/v1/internal/ai/ask`
-*   **Mô tả:** Xử lý luồng RAG, tìm kiếm tài liệu, và trả về câu trả lời có trích dẫn.
+**Endpoint:** `POST /api/v1/internal/ai/ask`
 
 **Request Payload:**
+
 ```json
 {
-  "query": "Chi phí quản lý doanh nghiệp trong năm 2025 có sự bất thường nào không?",
+  "query": "Doanh thu FPT năm 2025 có điểm gì đáng chú ý?",
   "companyCode": "FPT",
   "filters": {
     "year": 2025,
     "documentTypes": ["financial_statement", "annual_report"]
   },
-  "conversationId": "uuid-1234-5678" // Trống nếu là câu hỏi đầu tiên
+  "conversationId": null
 }
 ```
 
-**Response Payload (Thành công & Có dữ liệu):**
+**Response Payload:**
+
 ```json
 {
   "statusCode": 200,
   "message": "AI Generated Answer Successfully",
   "data": {
-    "answer": "Trong năm 2025, chi phí quản lý doanh nghiệp của FPT đạt 3.500 tỷ VNĐ, tăng 12% so với năm 2024. Sự gia tăng này chủ yếu đến từ chi phí nhân viên và các khoản dự phòng [1]. Không có sự bất thường đáng kể nào vi phạm quy định tài chính.",
+    "answer": "FPT duy trì tăng trưởng doanh thu nhờ mảng dịch vụ công nghệ.",
     "isConfident": true,
+    "limitations": null,
     "citations": [
       {
-        "id": "ref-01",
+        "citationId": 1,
+        "documentId": 1,
         "docTitle": "Báo cáo tài chính kiểm toán hợp nhất 2025",
         "sourceUrl": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
-        "pageNumber": 24,
-        "matchedText": "Chi phí quản lý doanh nghiệp tăng 12% do tăng chi phí nhân sự..."
+        "locationRef": "Trang 24",
+        "excerpt": "Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ."
       }
     ]
   },
@@ -80,107 +92,121 @@ API này do **FastAPI** cung cấp. NestJS sẽ gọi sang API này để lấy 
 }
 ```
 
-**Response Payload (Từ chối trả lời vì thiếu dữ liệu):**
+Khi thiếu dữ liệu, AI phải trả lời không đủ dữ liệu và để `citations` là mảng rỗng.
+
+---
+
+## 3. Frontend ↔ Backend
+
+### 3.1. Danh Sách Doanh Nghiệp
+
+**Endpoint:** `GET /api/v1/companies`
+
+**Response Payload:**
+
 ```json
 {
   "statusCode": 200,
-  "message": "Insufficient Data for AI",
+  "message": "Fetched companies",
+  "data": [
+    {
+      "companyId": 1,
+      "ticker": "FPT",
+      "companyName": "Công ty Cổ phần FPT",
+      "exchange": {
+        "exchangeId": 1,
+        "exchangeCode": "HOSE",
+        "exchangeName": "Sở Giao dịch Chứng khoán TP. Hồ Chí Minh"
+      },
+      "industry": {
+        "industryId": 1,
+        "industryCode": "TECH",
+        "industryName": "Công nghệ thông tin"
+      },
+      "listingDate": "2006-12-13",
+      "charterCapital": "14700000000000.00",
+      "website": "https://fpt.com",
+      "description": "Tập đoàn công nghệ hàng đầu Việt Nam...",
+      "executives": [],
+      "citations": []
+    }
+  ],
+  "error": null
+}
+```
+
+### 3.2. Hồ Sơ Doanh Nghiệp
+
+**Endpoint:** `GET /api/v1/companies/:companyCode/profile`
+
+**Response Payload:**
+
+```json
+{
+  "statusCode": 200,
+  "message": "Fetched company profile",
   "data": {
-    "answer": "Dữ liệu hiện tại của hệ thống không có báo cáo tài chính liên quan đến chi phí quản lý doanh nghiệp của FPT trong năm 2025 để tôi có thể phân tích.",
-    "isConfident": false,
+    "companyId": 1,
+    "ticker": "FPT",
+    "companyName": "Công ty Cổ phần FPT",
+    "exchange": {
+      "exchangeId": 1,
+      "exchangeCode": "HOSE",
+      "exchangeName": "Sở Giao dịch Chứng khoán TP. Hồ Chí Minh"
+    },
+    "industry": {
+      "industryId": 1,
+      "industryCode": "TECH",
+      "industryName": "Công nghệ thông tin"
+    },
+    "listingDate": "2006-12-13",
+    "charterCapital": "14700000000000.00",
+    "website": "https://fpt.com",
+    "description": "Tập đoàn công nghệ hàng đầu Việt Nam...",
+    "executives": [
+      {
+        "executiveId": 1,
+        "fullName": "Nguyễn Văn Khoa",
+        "position": "Tổng Giám đốc",
+        "startDate": null,
+        "endDate": null
+      }
+    ],
     "citations": []
   },
   "error": null
 }
 ```
 
----
+### 3.3. Dữ Liệu Tài Chính
 
-## 3. API Giao tiếp Hệ thống (Frontend ↔ Backend)
-
-API này do **NestJS** cung cấp cho Web App (Next.js) hiển thị dữ liệu.
-
-### 3.1. Lấy thông tin cơ bản Doanh nghiệp (hỗ trợ Module Company Profile)
-*   **Endpoint:** `GET /api/v1/companies/:companyCode/profile`
-*   **Mô tả:** Trả về hồ sơ doanh nghiệp (ngành nghề, vốn, thông tin niêm yết).
+**Endpoint:** `GET /api/v1/companies/:companyCode/financials`
 
 **Response Payload:**
-```json
-{
-  "statusCode": 200,
-  "message": "Fetched company profile",
-  "data": {
-    "companyCode": "FPT",
-    "name": "Công ty Cổ phần FPT",
-    "exchange": "HOSE",
-    "industry": "Công nghệ thông tin",
-    "summary": "Tập đoàn công nghệ hàng đầu Việt Nam...",
-    "website": "https://fpt.com",
-    "ceo": "Nguyễn Văn Khoa"
-  },
-  "error": null
-}
-```
 
-### 3.2. Lấy dữ liệu tài chính chuẩn hóa 
-*   **Endpoint:** `GET /api/v1/companies/:companyCode/financials?year=2025&quarter=4`
-*   **Mô tả:** Lấy dữ liệu bảng cân đối, kết quả kinh doanh.
-
-**Response Payload:**
 ```json
 {
   "statusCode": 200,
   "message": "Fetched financial data",
   "data": {
-    "companyCode": "FPT",
-    "year": 2025,
-    "quarter": 4,
-    "revenue": 50000000000,
-    "netProfit": 8000000000,
-    "totalAssets": 70000000000,
-    "liabilities": 30000000000,
-    "equity": 40000000000
-  },
-  "error": null
-}
-
-### 3.3. Lấy Lịch sử Dữ liệu Tài chính (Biểu đồ)
-*   **Endpoint:** `GET /api/v1/companies/:companyCode/financials/history?quarters=4`
-*   **Mô tả:** Trả về mảng dữ liệu tài chính của nhiều quý liên tiếp để vẽ biểu đồ "Hiệu quả kinh doanh".
-
-**Response Payload:**
-```json
-{
-  "statusCode": 200,
-  "message": "Fetched financial history",
-  "data": [
-    { "quarter": "Q1/2025", "revenue": 45000000000, "netProfit": 7000000000 },
-    { "quarter": "Q2/2025", "revenue": 48000000000, "netProfit": 7500000000 },
-    { "quarter": "Q3/2025", "revenue": 49000000000, "netProfit": 7800000000 },
-    { "quarter": "Q4/2025", "revenue": 50000000000, "netProfit": 8000000000 }
-  ],
-  "error": null
-}
-```
-
-### 3.4. Lấy Điểm Rủi ro (Radar Cảnh báo)
-*   **Endpoint:** `GET /api/v1/companies/:companyCode/risk-score`
-*   **Mô tả:** Lấy mức độ rủi ro tổng thể và các tín hiệu cảnh báo.
-
-**Response Payload:**
-```json
-{
-  "statusCode": 200,
-  "message": "Fetched risk score",
-  "data": {
-    "companyCode": "FPT",
-    "riskLevel": "AN_TOAN", // AN_TOAN, CHU_Y, CANH_BAO
-    "score": 85,
-    "signals": [
+    "reportId": 1,
+    "companyId": 1,
+    "ticker": "FPT",
+    "periodType": "Q",
+    "fiscalYear": 2025,
+    "fiscalQuarter": 4,
+    "reportDate": "2026-01-26",
+    "lineItems": [
       {
-        "signalType": "Tăng trưởng doanh thu chậm",
-        "description": "Doanh thu Q4 tăng nhưng biên lợi nhuận giảm",
-        "severity": "LOW"
+        "lineItemId": 1,
+        "metric": {
+          "metricId": 1,
+          "metricCode": "REVENUE",
+          "metricName": "Doanh thu",
+          "unit": "VND",
+          "statementType": "income_statement"
+        },
+        "value": "50000000000.0000"
       }
     ]
   },
@@ -188,21 +214,86 @@ API này do **NestJS** cung cấp cho Web App (Next.js) hiển thị dữ liệu
 }
 ```
 
-### 3.5. Lấy Tin tức Sự kiện
-*   **Endpoint:** `GET /api/v1/companies/:companyCode/news`
-*   **Mô tả:** Lấy danh sách tin tức liên quan đến công ty.
+### 3.4. Tài Liệu Nguồn
+
+**Endpoint:** `GET /api/v1/companies/:companyCode/documents`
 
 **Response Payload:**
+
 ```json
 {
   "statusCode": 200,
-  "message": "Fetched news",
+  "message": "Fetched documents",
   "data": [
     {
-      "id": 1,
-      "title": "FPT lọt top công ty công nghệ lớn nhất",
-      "url": "https://...",
-      "publishedAt": "2025-10-15T10:00:00Z"
+      "documentId": 1,
+      "companyId": 1,
+      "source": {
+        "sourceId": 1,
+        "sourceName": "WikiStock Demo Source",
+        "sourceType": "internal",
+        "reliabilityTier": 3,
+        "costTier": "free",
+        "accessUrl": "https://wikistock.vn"
+      },
+      "documentType": {
+        "docTypeId": 1,
+        "typeName": "financial_statement"
+      },
+      "title": "Báo cáo tài chính kiểm toán hợp nhất 2025",
+      "publishedDate": "2026-01-26",
+      "url": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
+      "fileRef": null,
+      "crawledAt": "2026-07-09T00:00:00.000Z",
+      "checksum": null
+    }
+  ],
+  "error": null
+}
+```
+
+### 3.5. Citation Theo Doanh Nghiệp
+
+**Endpoint:** `GET /api/v1/companies/:companyCode/citations`
+
+**Response Payload:**
+
+```json
+{
+  "statusCode": 200,
+  "message": "Fetched citations",
+  "data": [
+    {
+      "citationId": 1,
+      "documentId": 1,
+      "docTitle": "Báo cáo tài chính kiểm toán hợp nhất 2025",
+      "sourceUrl": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
+      "locationRef": "Trang 24",
+      "excerpt": "Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ."
+    }
+  ],
+  "error": null
+}
+```
+
+### 3.6. Admin Data Status
+
+**Endpoint:** `GET /api/v1/admin/companies`
+
+**Response Payload:**
+
+```json
+{
+  "statusCode": 200,
+  "message": "Fetched admin company status",
+  "data": [
+    {
+      "companyId": 1,
+      "ticker": "FPT",
+      "companyName": "Công ty Cổ phần FPT",
+      "dataStatus": "ready",
+      "sourceStatus": "mock",
+      "lastUpdated": "2026-07-09"
     }
   ],
   "error": null
@@ -211,45 +302,45 @@ API này do **NestJS** cung cấp cho Web App (Next.js) hiển thị dữ liệu
 
 ---
 
-## 4. API Xác thực (Authentication)
+## 4. Xác Thực
 
-### 4.1. Đăng ký & Đăng nhập
-*   **Endpoints:** 
-    - `POST /api/v1/auth/register` (body: email, password, name)
-    - `POST /api/v1/auth/login` (body: email, password)
-*   **Mô tả:** Trả về JWT Token để truy cập các API yêu cầu xác thực.
+Auth chưa hoàn thiện trong skeleton hiện tại. Khi triển khai, response user nên đi gần bảng `app_user`:
 
-**Response Payload (Thành công):**
 ```json
 {
-  "statusCode": 200,
-  "message": "Login successful",
-  "data": {
-    "accessToken": "eyJhbGciOiJIUz...",
-    "user": {
-      "id": 1,
-      "name": "Thắng",
-      "email": "thang@wikistock.vn"
-    }
-  },
-  "error": null
+  "userId": 1,
+  "email": "thang@wikistock.vn",
+  "fullName": "Thắng",
+  "role": {
+    "roleId": 1,
+    "roleName": "admin"
+  }
 }
 ```
 
 ---
 
-## 5. API Trợ lý AI (Web-Facing)
+## 5. AI Web-Facing
 
-### 5.1. Hỏi đáp AI (Server-Sent Events)
-*   **Endpoint:** `GET /api/v1/chat/stream?query=Tạo_sao_chi_phí_tăng&companyCode=FPT`
-*   **Header Required:** `Authorization: Bearer <token>`
-*   **Mô tả:** API trả về luồng dữ liệu (Stream) dạng `text/event-stream` để Frontend làm hiệu ứng gõ chữ (typing). Dữ liệu cuối cùng của stream sẽ kèm theo Citations.
+Skeleton hiện tại dùng:
 
-**Định dạng Data Stream (SSE):**
 ```text
-data: {"chunk": "Trong năm 2025,"}
-data: {"chunk": " chi phí quản lý của FPT đạt 3.500 tỷ..."}
-data: {"citations": [{"docTitle": "BCTC Q4", "pageNumber": 24}]}
-data: [DONE]
+POST /api/v1/ai/ask
 ```
+
+Request:
+
+```json
+{
+  "query": "Tình hình doanh thu FPT có điểm gì đáng chú ý?",
+  "companyCode": "FPT",
+  "filters": {
+    "year": 2025,
+    "documentTypes": ["financial_statement", "annual_report"]
+  }
+}
 ```
+
+Response dùng cùng shape với mục **2.1**.
+
+SSE endpoint `GET /api/v1/chat/stream` vẫn là mục tiêu sau, chưa phải endpoint chính trong skeleton hiện tại.
