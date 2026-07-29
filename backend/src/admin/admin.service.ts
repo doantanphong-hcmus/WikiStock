@@ -9,10 +9,10 @@ export class AdminService {
       statusCode: 200,
       message: 'Fetched admin company status',
       data: mockCompanies.map((company) => ({
-        companyCode: company.companyCode,
+        companyId: company.companyId,
         ticker: company.ticker,
-        name: company.name,
-        dataStatus: company.companyCode === 'FPT' ? 'ready' : 'draft',
+        companyName: company.companyName,
+        dataStatus: company.ticker === 'FPT' ? 'ready' : 'draft',
         sourceStatus: 'mock',
         lastUpdated: '2026-07-09',
       })),

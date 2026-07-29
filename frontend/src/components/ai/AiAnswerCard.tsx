@@ -29,7 +29,7 @@ export function AiAnswerCard({ answer }: { answer: AiAskResponse | null }) {
         {answer.citations.length ? (
           <ul className="space-y-3">
             {answer.citations.map((citation) => (
-              <li key={citation.id} className="rounded-md border border-zinc-200 p-3">
+              <li key={citation.citationId} className="rounded-md border border-zinc-200 p-3">
                 <a
                   href={citation.sourceUrl}
                   target="_blank"
@@ -38,10 +38,10 @@ export function AiAnswerCard({ answer }: { answer: AiAskResponse | null }) {
                 >
                   {citation.docTitle}
                 </a>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Trang {citation.pageNumber}
-                </p>
-                <p className="mt-2 text-sm text-zinc-600">{citation.matchedText}</p>
+                {citation.locationRef ? (
+                  <p className="mt-1 text-xs text-zinc-500">{citation.locationRef}</p>
+                ) : null}
+                <p className="mt-2 text-sm text-zinc-600">{citation.excerpt}</p>
               </li>
             ))}
           </ul>

@@ -7,6 +7,6 @@ describe('CompaniesService', () => {
 
     expect(result).toBeDefined();
     expect(result.data?.ticker).toBe('FPT');
-    expect(result.data?.name).toContain('FPT');
+    expect(result.data?.companyName).toContain('FPT');
   });
 });

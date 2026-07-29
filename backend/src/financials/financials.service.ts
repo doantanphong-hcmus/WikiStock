@@ -24,19 +24,10 @@ export class FinancialsService {
       });
     }
 
-    const parsedYear = Number(year ?? financial.year);
-    const parsedQuarter = Number(quarter ?? financial.quarter);
-
     return {
       statusCode: 200,
       message: 'Fetched financial data',
-      data: {
-        ...financial,
-        year: Number.isNaN(parsedYear) ? financial.year : parsedYear,
-        quarter: Number.isNaN(parsedQuarter)
-          ? financial.quarter
-          : parsedQuarter,
-      },
+      data: financial,
       error: null,
     };
   }

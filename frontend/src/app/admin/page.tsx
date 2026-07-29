@@ -49,11 +49,11 @@ export default async function AdminPage() {
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {companies.map((company) => (
-              <tr key={company.companyCode}>
+              <tr key={company.companyId}>
                 <td className="px-5 py-4 font-semibold text-zinc-950">
                   {company.ticker}
                 </td>
-                <td className="px-5 py-4 text-zinc-700">{company.name}</td>
+                <td className="px-5 py-4 text-zinc-700">{company.companyName}</td>
                 <td className="px-5 py-4">
                   <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
                     {company.dataStatus}

@@ -1,13 +1,5 @@
-import type { FinancialMetric, FinancialSummary } from "@/lib/types";
+import type { FinancialSummary } from "@/lib/types";
 import { EmptyState } from "@/components/common/EmptyState";
-
-const metricLabels: Array<Omit<FinancialMetric, "value">> = [
-  { key: "revenue", label: "Doanh thu", unit: "VND" },
-  { key: "netProfit", label: "Lợi nhuận sau thuế", unit: "VND" },
-  { key: "totalAssets", label: "Tổng tài sản", unit: "VND" },
-  { key: "liabilities", label: "Nợ phải trả", unit: "VND" },
-  { key: "equity", label: "Vốn chủ sở hữu", unit: "VND" },
-];
 
 const numberFormatter = new Intl.NumberFormat("vi-VN");
 
@@ -25,16 +17,14 @@ export function FinancialTable({
     );
   }
 
-  const metrics = metricLabels.map((metric) => ({
-    ...metric,
-    value: financials[metric.key],
-  }));
-
   return (
     <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
       <div className="border-b border-zinc-200 p-5">
         <h2 className="text-lg font-semibold text-zinc-950">
-          {financials.companyCode} Q{financials.quarter}/{financials.year}
+          {financials.ticker}{" "}
+          {financials.periodType === "Q"
+            ? `Q${financials.fiscalQuarter}/${financials.fiscalYear}`
+            : financials.fiscalYear}
         </h2>
       </div>
       <div className="overflow-x-auto">
@@ -47,15 +37,15 @@ export function FinancialTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {metrics.map((metric) => (
-              <tr key={metric.key}>
+            {financials.lineItems.map((lineItem) => (
+              <tr key={lineItem.lineItemId}>
                 <td className="px-5 py-4 font-medium text-zinc-800">
-                  {metric.label}
+                  {lineItem.metric.metricName}
                 </td>
                 <td className="px-5 py-4 text-right tabular-nums text-zinc-950">
-                  {numberFormatter.format(metric.value)}
+                  {numberFormatter.format(Number(lineItem.value))}
                 </td>
-                <td className="px-5 py-4 text-zinc-500">{metric.unit}</td>
+                <td className="px-5 py-4 text-zinc-500">{lineItem.metric.unit}</td>
               </tr>
             ))}
           </tbody>
