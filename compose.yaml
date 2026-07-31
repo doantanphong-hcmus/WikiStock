@@ -48,6 +48,7 @@ services:
       PORT: 3001
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       AI_SERVICE_URL: http://ai-service:8000
+      AI_DEMO_MODE: ${AI_DEMO_MODE:-false}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wikistock}:${POSTGRES_PASSWORD:-wikistock}@postgres:5432/${POSTGRES_DB:-wikistock}
     ports:
       - "${BACKEND_PORT:-3001}:3001"

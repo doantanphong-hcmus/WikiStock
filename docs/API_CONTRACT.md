@@ -101,6 +101,16 @@ Nếu evidence sai cấu trúc hoặc không trỏ tới nguồn đã biết, Ba
 `502` với error code `AI_INVALID_EVIDENCE`; không chuyển tiếp answer thiếu
 nguồn và không thay bằng citation giả.
 
+JSON hoặc các trường `answer`/`isConfident` sai contract trả `502` với error
+code `AI_INVALID_RESPONSE`; Backend không tự điền câu trả lời hoặc confidence.
+
+Lỗi kết nối hoặc HTTP lỗi từ AI Service trả `502` với error code
+`AI_SERVICE_UNAVAILABLE`. Timeout trả `504` với error code
+`AI_SERVICE_TIMEOUT`.
+
+Fallback mock chỉ được phép khi Backend chạy với `AI_DEMO_MODE=true`. Mặc định
+`AI_DEMO_MODE=false`; production không chuyển lỗi AI thành response thành công.
+
 ---
 
 ## 3. Frontend ↔ Backend
