@@ -1,4 +1,8 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import {
+  BadGatewayException,
+  GatewayTimeoutException,
+  Injectable,
+} from '@nestjs/common';
 import {
   AiAskRequest,
   AiAskResponse,
@@ -25,6 +29,49 @@ function invalidEvidence(details: string) {
       details,
     },
   });
+}
+
+function invalidResponse(details: string) {
+  return new BadGatewayException({
+    statusCode: 502,
+    message: 'AI service returned an invalid response',
+    data: null,
+    error: {
+      code: 'AI_INVALID_RESPONSE',
+      details,
+    },
+  });
+}
+
+function serviceUnavailable(details: string) {
+  return new BadGatewayException({
+    statusCode: 502,
+    message: 'AI service is unavailable',
+    data: null,
+    error: {
+      code: 'AI_SERVICE_UNAVAILABLE',
+      details,
+    },
+  });
+}
+
+function serviceTimeout() {
+  return new GatewayTimeoutException({
+    statusCode: 504,
+    message: 'AI service timed out',
+    data: null,
+    error: {
+      code: 'AI_SERVICE_TIMEOUT',
+      details: 'AI service did not respond within 3000ms',
+    },
+  });
+}
+
+function isTimeoutError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === 'TimeoutError' || error.name === 'AbortError')
+  );
 }
 
 @Injectable()
@@ -79,8 +126,24 @@ export class AiService {
     });
   }
 
+  private demoFallback(companyCode: string): ApiResponse<AiAskResponse> {
+    return {
+      statusCode: 200,
+      message: 'AI service unavailable, using fallback demo response',
+      data: {
+        answer: `AI service chưa khả dụng trong môi trường local. Đây là phản hồi demo cho ${companyCode || 'mã cổ phiếu đã chọn'}.`,
+        isConfident: false,
+        citations: mockCitations[companyCode] ?? [],
+        limitations:
+          'AI service chưa chạy hoặc không phản hồi đúng hạn. Dữ liệu hiện tại là mock/demo.',
+      },
+      error: null,
+    };
+  }
+
   async ask(payload: AiAskRequest): Promise<ApiResponse<AiAskResponse>> {
     const baseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8000';
+    const demoMode = process.env.AI_DEMO_MODE === 'true';
     const companyCode = (
       payload.companyCode ??
       payload.ticker ??
@@ -88,8 +151,9 @@ export class AiService {
     ).toUpperCase();
     const query = payload.query ?? payload.question ?? '';
 
+    let response: Response;
     try {
-      const response = await fetch(`${baseUrl}/api/v1/internal/ai/ask`, {
+      response = await fetch(`${baseUrl}/api/v1/internal/ai/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,69 +164,71 @@ export class AiService {
         }),
         signal: AbortSignal.timeout(3000),
       });
-
-      if (!response.ok) {
-        throw new Error(`AI service returned ${response.status}`);
-      }
-
-      let body: unknown;
-      try {
-        body = await response.json();
-      } catch {
-        throw invalidEvidence('AI service response is not valid JSON');
-      }
-
-      const envelope = asObject(body);
-      const data = asObject(envelope?.data ?? body);
-      if (!data) {
-        throw invalidEvidence('AI service response data must be an object');
-      }
-
-      const citations = this.mapEvidence(companyCode, data.evidence);
-      const isConfident = data.isConfident === true;
-
-      if (isConfident && citations.length === 0) {
-        throw invalidEvidence(
-          'A confident financial answer must include evidence',
-        );
-      }
-
-      return {
-        statusCode: 200,
-        message: 'AI Generated Answer Successfully',
-        data: {
-          answer:
-            typeof data.answer === 'string'
-              ? data.answer
-              : 'Không có câu trả lời từ AI service.',
-          isConfident,
-          citations,
-          limitations:
-            typeof data.limitations === 'string'
-              ? data.limitations
-              : isConfident
-                ? undefined
-                : 'Kết quả được trả về từ ai-service local, chưa kết nối dữ liệu thật.',
-        },
-        error: null,
-      };
     } catch (error) {
-      if (error instanceof BadGatewayException) {
-        throw error;
+      if (demoMode) {
+        return this.demoFallback(companyCode);
       }
 
-      return {
-        statusCode: 200,
-        message: 'AI service unavailable, using fallback demo response',
-        data: {
-          answer: `AI service chưa khả dụng trong môi trường local. Đây là phản hồi demo cho ${companyCode || 'mã cổ phiếu đã chọn'}.`,
-          isConfident: false,
-          citations: mockCitations[companyCode] ?? [],
-          limitations:
-            'AI service chưa chạy hoặc không phản hồi đúng hạn. Dữ liệu hiện tại là mock/demo.',
-        },
-        error: null,
-      };
+      if (isTimeoutError(error)) {
+        throw serviceTimeout();
+      }
+
+      throw serviceUnavailable('Could not connect to AI service');
     }
+
+    if (!response.ok) {
+      if (demoMode) {
+        return this.demoFallback(companyCode);
+      }
+
+      throw serviceUnavailable(`AI service returned HTTP ${response.status}`);
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw invalidResponse('AI service response is not valid JSON');
+    }
+
+    const envelope = asObject(body);
+    const data = asObject(envelope?.data ?? body);
+    if (!data) {
+      throw invalidResponse('AI service response data must be an object');
+    }
+
+    if (
+      typeof data.answer !== 'string' ||
+      !data.answer.trim() ||
+      typeof data.isConfident !== 'boolean'
+    ) {
+      throw invalidResponse('Answer and confidence fields are required');
+    }
+
+    const citations = this.mapEvidence(companyCode, data.evidence);
+    const isConfident = data.isConfident;
+
+    if (isConfident && citations.length === 0) {
+      throw invalidEvidence(
+        'A confident financial answer must include evidence',
+      );
+    }
+
+    return {
+      statusCode: 200,
+      message: 'AI Generated Answer Successfully',
+      data: {
+        answer: data.answer,
+        isConfident,
+        citations,
+        limitations:
+          typeof data.limitations === 'string'
+            ? data.limitations
+            : isConfident
+              ? undefined
+              : 'Kết quả được trả về từ ai-service local, chưa kết nối dữ liệu thật.',
+      },
+      error: null,
+    };
   }
 }
