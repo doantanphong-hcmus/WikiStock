@@ -309,8 +309,8 @@ Fallback mock chỉ được phép khi Backend chạy với `AI_DEMO_MODE=true`.
       "ticker": "FPT",
       "companyName": "Công ty Cổ phần FPT",
       "dataStatus": "ready",
-      "sourceStatus": "mock",
-      "lastUpdated": "2026-07-09"
+      "sourceStatus": "available",
+      "lastUpdated": "2026-07-09T00:00:00.000Z"
     }
   ],
   "error": null
@@ -321,19 +321,72 @@ Fallback mock chỉ được phép khi Backend chạy với `AI_DEMO_MODE=true`.
 
 ## 4. Xác Thực
 
-Auth chưa hoàn thiện trong skeleton hiện tại. Khi triển khai, response user nên đi gần bảng `app_user`:
+### 4.1. Đăng nhập
+
+**Endpoint:** `POST /api/v1/auth/login`
 
 ```json
 {
-  "userId": 1,
-  "email": "thang@wikistock.vn",
-  "fullName": "Thắng",
-  "role": {
-    "roleId": 1,
-    "roleName": "admin"
-  }
+  "email": "admin@wikistock.vn",
+  "password": "your-password"
 }
 ```
+
+Response trả về JWT có thời hạn mặc định 3.600 giây:
+
+```json
+{
+  "statusCode": 200,
+  "message": "Logged in successfully",
+  "data": {
+    "accessToken": "<jwt>",
+    "expiresIn": 3600,
+    "user": {
+      "userId": 1,
+      "email": "admin@wikistock.vn",
+      "fullName": "Admin",
+      "role": {
+        "roleId": 1,
+        "roleName": "admin"
+      }
+    }
+  },
+  "error": null
+}
+```
+
+### 4.2. Quyền Admin
+
+Mọi endpoint `/api/v1/admin/*` yêu cầu header:
+
+```http
+Authorization: Bearer <jwt>
+```
+
+Backend xác minh chữ ký JWT, sau đó đọc lại role hiện tại của user từ database.
+Role trong token không được dùng làm nguồn phân quyền cuối cùng, vì role có thể đã
+được Admin khác thay đổi sau khi token được cấp.
+
+- Thiếu, sai hoặc hết hạn token: `401 Unauthorized`.
+- User không còn tồn tại: `401 Unauthorized`.
+- User tồn tại nhưng role không phải `admin`: `403 Forbidden`.
+
+### 4.3. Admin API
+
+| Method  | Endpoint                                     | Chức năng                                            |
+| ------- | -------------------------------------------- | ---------------------------------------------------- |
+| `GET`   | `/api/v1/admin/companies`                    | Theo dõi trạng thái dữ liệu từng công ty             |
+| `GET`   | `/api/v1/admin/documents`                    | Liệt kê tài liệu nguồn và trạng thái review          |
+| `GET`   | `/api/v1/admin/document-options`             | Lấy company, source và document type để tạo tài liệu |
+| `POST`  | `/api/v1/admin/documents`                    | Tạo tài liệu nguồn                                   |
+| `PATCH` | `/api/v1/admin/documents/:documentId/review` | Duyệt hoặc từ chối tài liệu                          |
+| `POST`  | `/api/v1/admin/citations/check`              | Kiểm tra metadata citation và tài liệu nguồn         |
+| `GET`   | `/api/v1/admin/users`                        | Liệt kê user, không trả password hash                |
+| `POST`  | `/api/v1/admin/users`                        | Tạo user                                             |
+| `GET`   | `/api/v1/admin/roles`                        | Liệt kê role                                         |
+| `PATCH` | `/api/v1/admin/users/:userId/role`           | Thay đổi role của user                               |
+
+Admin không được tự hạ role của chính mình để tránh tự khoá quyền truy cập.
 
 ---
 
