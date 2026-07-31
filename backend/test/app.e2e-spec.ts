@@ -13,14 +13,28 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/api (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/api')
       .expect(200)
-      .expect('Hello World!');
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          statusCode: 200,
+          message: 'WikiStock API gateway',
+          data: { name: 'WikiStock Backend', status: 'ok' },
+          error: null,
+        });
+      });
+  });
+
+  it('protects Admin endpoints', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/admin/companies')
+      .expect(401);
   });
 
   afterEach(async () => {
