@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 // =============================================================
@@ -38,8 +38,8 @@ model DataSource {
   costTier        String  @map("cost_tier") @db.VarChar(20)
   accessUrl       String? @map("access_url") @db.Text
 
-  sourceDocuments  SourceDocument[]
-  newsArticles     NewsArticle[]
+  sourceDocuments   SourceDocument[]
+  newsArticles      NewsArticle[]
   dataIngestionLogs DataIngestionLog[]
 
   @@map("data_source")
@@ -100,30 +100,30 @@ model UserRole {
 // =============================================================
 
 model Company {
-  companyId      Int      @id @default(autoincrement()) @map("company_id")
-  ticker         String   @unique @db.VarChar(10)
-  companyName    String   @map("company_name") @db.VarChar(255)
-  exchangeId     Int      @map("exchange_id")
-  industryId     Int      @map("industry_id")
+  companyId      Int       @id @default(autoincrement()) @map("company_id")
+  ticker         String    @unique @db.VarChar(10)
+  companyName    String    @map("company_name") @db.VarChar(255)
+  exchangeId     Int       @map("exchange_id")
+  industryId     Int       @map("industry_id")
   listingDate    DateTime? @map("listing_date") @db.Date
-  charterCapital Decimal? @map("charter_capital") @db.Decimal(20, 2)
-  website        String?  @db.Text
-  description    String?  @db.Text
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  charterCapital Decimal?  @map("charter_capital") @db.Decimal(20, 2)
+  website        String?   @db.Text
+  description    String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   exchange Exchange @relation(fields: [exchangeId], references: [exchangeId])
   industry Industry @relation(fields: [industryId], references: [industryId])
 
-  sourceDocuments        SourceDocument[]
-  executives             CompanyExecutive[]
-  financialReports       FinancialReport[]
-  newsArticleCompanies   NewsArticleCompany[]
-  timelineEvents         TimelineEvent[]
-  riskSignals            RiskSignal[]
-  riskScores             RiskScore[]
-  aiMessages             AiMessage[]
-  watchlists             Watchlist[]
+  sourceDocuments         SourceDocument[]
+  executives              CompanyExecutive[]
+  financialReports        FinancialReport[]
+  newsArticleCompanies    NewsArticleCompany[]
+  timelineEvents          TimelineEvent[]
+  riskSignals             RiskSignal[]
+  riskScores              RiskScore[]
+  aiMessages              AiMessage[]
+  watchlists              Watchlist[]
   compareSessionCompanies CompareSessionCompany[]
 
   @@map("company")
@@ -134,28 +134,55 @@ model Company {
 // =============================================================
 
 model SourceDocument {
-  documentId    Int       @id @default(autoincrement()) @map("document_id")
-  companyId     Int?      @map("company_id")
-  sourceId      Int       @map("source_id")
-  docTypeId     Int       @map("doc_type_id")
-  title         String    @db.VarChar(500)
-  publishedDate DateTime? @map("published_date") @db.Date
-  url           String    @db.Text
-  fileRef       String?   @map("file_ref") @db.Text
-  crawledAt     DateTime  @default(now()) @map("crawled_at") @db.Timestamptz(6)
-  checksum      String?   @db.VarChar(64)
+  documentId      Int       @id @default(autoincrement()) @map("document_id")
+  companyId       Int?      @map("company_id")
+  sourceId        Int       @map("source_id")
+  docTypeId       Int       @map("doc_type_id")
+  title           String    @db.VarChar(500)
+  publishedDate   DateTime? @map("published_date") @db.Date
+  fiscalYear      Int?      @map("fiscal_year") @db.SmallInt
+  fiscalQuarter   Int?      @map("fiscal_quarter") @db.SmallInt
+  url             String?   @db.Text
+  fileRef         String?   @map("file_ref") @db.Text
+  crawledAt       DateTime  @default(now()) @map("crawled_at") @db.Timestamptz(6)
+  checksum        String?   @unique @db.VarChar(64)
+  ingestionStatus String    @default("pending") @map("ingestion_status") @db.VarChar(20)
+  ingestedAt      DateTime? @map("ingested_at") @db.Timestamptz(6)
+  ingestionError  String?   @map("ingestion_error") @db.Text
+  embeddingModel  String?   @map("embedding_model") @db.VarChar(100)
+  chunkVersion    String?   @map("chunk_version") @db.VarChar(30)
 
   company      Company?     @relation(fields: [companyId], references: [companyId])
   source       DataSource   @relation(fields: [sourceId], references: [sourceId])
   documentType DocumentType @relation(fields: [docTypeId], references: [docTypeId])
 
-  executives      CompanyExecutive[]
-  citations       Citation[]
+  executives       CompanyExecutive[]
+  citations        Citation[]
+  chunks           DocumentChunk[]
   financialReports FinancialReport[]
-  documentReview  DocumentReview?
+  documentReview   DocumentReview?
 
   @@index([companyId], map: "idx_source_document_company")
   @@map("source_document")
+}
+
+model DocumentChunk {
+  chunkId     Int                          @id @default(autoincrement()) @map("chunk_id")
+  documentId  Int                          @map("document_id")
+  chunkIndex  Int                          @map("chunk_index")
+  pageNumber  Int                          @map("page_number")
+  locationRef String                       @map("location_ref") @db.VarChar(100)
+  content     String                       @db.Text
+  charCount   Int                          @map("char_count")
+  contentHash String                       @map("content_hash") @db.VarChar(64)
+  embedding   Unsupported("vector(1024)")?
+  createdAt   DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  document SourceDocument @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  citation Citation?
+
+  @@unique([documentId, chunkIndex])
+  @@map("document_chunk")
 }
 
 model CompanyExecutive {
@@ -176,11 +203,13 @@ model CompanyExecutive {
 model Citation {
   citationId  Int      @id @default(autoincrement()) @map("citation_id")
   documentId  Int      @map("document_id")
+  chunkId     Int?     @unique @map("chunk_id")
   excerpt     String?  @db.Text
   locationRef String?  @map("location_ref") @db.VarChar(100)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   document SourceDocument @relation(fields: [documentId], references: [documentId])
+  chunk    DocumentChunk? @relation(fields: [chunkId], references: [chunkId], onDelete: SetNull)
 
   financialLineItemCitations FinancialLineItemCitation[]
   timelineEventCitations     TimelineEventCitation[]
@@ -369,10 +398,10 @@ model AppUser {
 
   role UserRole @relation(fields: [roleId], references: [roleId])
 
-  conversations    AiConversation[]
-  watchlists       Watchlist[]
-  compareSessions  CompareSession[]
-  documentReviews  DocumentReview[]
+  conversations   AiConversation[]
+  watchlists      Watchlist[]
+  compareSessions CompareSession[]
+  documentReviews DocumentReview[]
 
   @@map("app_user")
 }

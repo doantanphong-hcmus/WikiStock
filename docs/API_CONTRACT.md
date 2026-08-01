@@ -269,6 +269,9 @@ Fallback mock chỉ được phép khi Backend chạy với `AI_DEMO_MODE=true`.
 }
 ```
 
+`url` có thể là `null` đối với tài liệu local; khi đó `fileRef` là tham chiếu
+nguồn nội bộ và Backend sẽ chịu trách nhiệm tạo URL tải file công khai.
+
 ### 3.5. Citation Theo Doanh Nghiệp
 
 **Endpoint:** `GET /api/v1/companies/:companyCode/citations`

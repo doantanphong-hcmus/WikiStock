@@ -16,6 +16,7 @@ describe('AdminService', () => {
               documentId: 10,
               title: 'Annual report',
               url: 'not-a-url',
+              fileRef: null,
             },
           },
           {
@@ -26,6 +27,18 @@ describe('AdminService', () => {
               documentId: 11,
               title: 'Financial statement',
               url: 'https://example.com/report.pdf',
+              fileRef: null,
+            },
+          },
+          {
+            citationId: 3,
+            excerpt: 'Net revenue increased.',
+            locationRef: 'Page 8',
+            document: {
+              documentId: 12,
+              title: 'Local financial statement',
+              url: null,
+              fileRef: 'seed_data/FPT/report.pdf',
             },
           },
         ]),
@@ -36,8 +49,8 @@ describe('AdminService', () => {
     const result = await service.runCitationCheck();
 
     expect(result.data).toMatchObject({
-      totalCitations: 2,
-      validCitations: 1,
+      totalCitations: 3,
+      validCitations: 2,
       invalidCitations: 1,
       warnings: 2,
     });
