@@ -206,7 +206,7 @@ export class AdminService {
         excerpt: true,
         locationRef: true,
         document: {
-          select: { documentId: true, title: true, url: true },
+          select: { documentId: true, title: true, url: true, fileRef: true },
         },
       },
     });
@@ -228,17 +228,26 @@ export class AdminService {
         });
       }
 
-      try {
-        const url = new URL(citation.document.url);
-        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-          throw new Error('Unsupported URL protocol');
+      if (citation.document.url) {
+        try {
+          const url = new URL(citation.document.url);
+          if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            throw new Error('Unsupported URL protocol');
+          }
+        } catch {
+          citationIssues.push({
+            citationId: citation.citationId,
+            severity: 'error',
+            code: 'INVALID_SOURCE_URL',
+            details: `Document ${citation.document.documentId} has an invalid URL`,
+          });
         }
-      } catch {
+      } else if (!citation.document.fileRef?.trim()) {
         citationIssues.push({
           citationId: citation.citationId,
           severity: 'error',
-          code: 'INVALID_SOURCE_URL',
-          details: `Document ${citation.document.documentId} has an invalid URL`,
+          code: 'MISSING_SOURCE_REFERENCE',
+          details: `Document ${citation.document.documentId} has no URL or file reference`,
         });
       }
 

@@ -97,7 +97,7 @@ export interface DocumentSummary {
   documentType: DocumentTypeSummary;
   title: string;
   publishedDate: string | null;
-  url: string;
+  url: string | null;
   fileRef: string | null;
   crawledAt: string;
   checksum: string | null;

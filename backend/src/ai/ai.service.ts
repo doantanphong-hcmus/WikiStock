@@ -114,6 +114,11 @@ export class AiService {
           `Evidence at index ${index} does not match a known source`,
         );
       }
+      if (!document.url) {
+        throw invalidEvidence(
+          `Evidence at index ${index} has no public source URL`,
+        );
+      }
 
       return {
         citationId: citation.citationId,
