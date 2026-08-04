@@ -76,3 +76,37 @@ With Docker Compose, the seed directory is mounted read-only at
 ```bash
 docker compose run --rm ai-service python -m app.ingestion scan --dry-run
 ```
+
+## RAG ingestion persistence
+
+The non-dry-run command stores text PDFs in PostgreSQL with normalized
+`BAAI/bge-m3` vectors. A document is skipped when its checksum, embedding
+model, chunk version, and `ready` status already match. Image-only PDFs are
+reported as `needs_ocr` and remain untouched for the OCR task.
+
+```bash
+docker compose run --rm ai-service python -m app.ingestion scan
+```
+
+The first model download is cached in the `model_cache` Docker volume. To run
+the database integration gate against the Compose database:
+
+```bash
+docker compose run --rm \
+  -e TEST_DATABASE_URL='postgresql://wikistock:wikistock@postgres:5432/wikistock' \
+  ai-service python -m unittest discover -s tests
+```
+
+Acceptance query:
+
+```bash
+docker compose exec -T postgres psql -U wikistock -d wikistock -c "
+SELECT d.file_ref, d.ingestion_status, d.embedding_model, d.chunk_version,
+       count(DISTINCT ch.chunk_id) AS chunks,
+       count(DISTINCT ci.citation_id) AS citations
+FROM source_document d
+LEFT JOIN document_chunk ch ON ch.document_id = d.document_id
+LEFT JOIN citation ci ON ci.document_id = d.document_id
+GROUP BY d.document_id
+ORDER BY d.file_ref;"
+```

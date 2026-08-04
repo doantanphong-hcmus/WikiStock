@@ -4,16 +4,15 @@ import argparse
 import hashlib
 import json
 import re
-import sys
 import unicodedata
 from dataclasses import asdict
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 import pymupdf
 
 from app.config import IngestionSettings
-from app.models import DocumentChunk, DocumentMetadata, Issue, PageText
+from app.models import DocumentChunk, DocumentMetadata, IngestionError, Issue, PageText
 
 
 KNOWN_COMPANY_CODES = frozenset({"FPT", "GAS", "HPG", "HSG"})
@@ -26,12 +25,6 @@ _REPORT_PERIOD_PATTERNS = (
         r"(?:[-_ ]+nam)?[-_ ]+(20\d{2})(?:[^0-9]|$)"
     ),
 )
-
-
-class IngestionError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
 
 
 def _relative_display(path: Path, root: Path) -> str:
@@ -302,8 +295,137 @@ def scan(settings: IngestionSettings) -> tuple[list[dict[str, object]], int]:
     return results, failed
 
 
+def ingest(
+    settings: IngestionSettings,
+    database=None,
+    embedder: (
+        Callable[[Sequence[str], str, int], list[list[float]]] | None
+    ) = None,
+) -> tuple[list[dict[str, object]], int]:
+    from app.database import IngestionDatabase
+    from app.embeddings import embed_texts, validate_embeddings
+
+    if database is None and not settings.database_url:
+        raise IngestionError(
+            "DATABASE_URL_REQUIRED", "DATABASE_URL is required for non-dry-run ingestion"
+        )
+    database = database or IngestionDatabase(settings.database_url)
+    embedder = embedder or embed_texts
+    paths, results = discover_pdf_paths(
+        settings.seed_data_path, settings.max_pdf_size_mb
+    )
+
+    for path in paths:
+        display_path = _relative_display(path, settings.seed_data_path)
+        document_id: int | None = None
+        try:
+            metadata = parse_document_metadata(path, settings.seed_data_path)
+            checksum = sha256_file(path)
+            state = database.document_state(checksum)
+            if state == (
+                "ready",
+                settings.embedding_model,
+                settings.chunk_version,
+            ):
+                results.append(
+                    {
+                        "path": display_path,
+                        "companyCode": metadata.company_code,
+                        "fiscalYear": metadata.fiscal_year,
+                        "fiscalQuarter": metadata.fiscal_quarter,
+                        "checksum": checksum,
+                        "pageCount": 0,
+                        "chunkCount": 0,
+                        "status": "skipped",
+                        "issues": [asdict(issue) for issue in metadata.issues],
+                    }
+                )
+                continue
+
+            pages = extract_pdf_pages(path)
+            if pdf_needs_ocr(pages):
+                results.append(
+                    {
+                        **_failed_result(
+                            display_path,
+                            "PDF_NEEDS_OCR",
+                            "Most pages contain images but too little extractable text",
+                        ),
+                        "companyCode": metadata.company_code,
+                        "fiscalYear": metadata.fiscal_year,
+                        "fiscalQuarter": metadata.fiscal_quarter,
+                        "checksum": checksum,
+                        "pageCount": len(pages),
+                        "status": "needs_ocr",
+                    }
+                )
+                continue
+
+            chunks = chunk_pages(
+                pages, settings.chunk_size_chars, settings.chunk_overlap_chars
+            )
+            if not chunks:
+                raise IngestionError("PDF_PARSE_FAILED", "PDF has no extractable text")
+
+            document_id = database.prepare_document(
+                metadata, path.stem, display_path, checksum
+            )
+            embeddings = embedder(
+                [chunk.content for chunk in chunks],
+                settings.embedding_model,
+                settings.embedding_batch_size,
+            )
+            validate_embeddings(
+                embeddings, len(chunks), settings.embedding_dimensions
+            )
+            database.replace_chunks(
+                document_id,
+                chunks,
+                embeddings,
+                settings.embedding_model,
+                settings.chunk_version,
+            )
+            results.append(
+                {
+                    "path": display_path,
+                    "companyCode": metadata.company_code,
+                    "fiscalYear": metadata.fiscal_year,
+                    "fiscalQuarter": metadata.fiscal_quarter,
+                    "checksum": checksum,
+                    "pageCount": len(pages),
+                    "chunkCount": len(chunks),
+                    "status": "inserted" if state is None else "reingested",
+                    "issues": [asdict(issue) for issue in metadata.issues],
+                }
+            )
+        except Exception as error:
+            if document_id is not None:
+                safe_message = (
+                    str(error)
+                    if isinstance(error, IngestionError)
+                    else f"{type(error).__name__}: ingestion failed"
+                )
+                try:
+                    database.mark_failed(document_id, safe_message)
+                except Exception:
+                    pass
+            code = (
+                error.code if isinstance(error, IngestionError) else "INGESTION_FAILED"
+            )
+            message = (
+                str(error)
+                if isinstance(error, IngestionError)
+                else f"{type(error).__name__}: ingestion failed"
+            )
+            results.append(_failed_result(display_path, code, message))
+
+    results.sort(key=lambda result: str(result["path"]).casefold())
+    failed = sum(result["status"] == "failed" for result in results)
+    return results, failed
+
+
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="WikiStock PDF ingestion preflight")
+    parser = argparse.ArgumentParser(description="WikiStock PDF ingestion")
     subparsers = parser.add_subparsers(dest="command", required=True)
     scan_parser = subparsers.add_parser("scan", help="scan configured seed PDFs")
     scan_parser.add_argument("--dry-run", action="store_true")
@@ -312,11 +434,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    if args.command != "scan" or not args.dry_run:
-        print("R3 only supports: scan --dry-run", file=sys.stderr)
+    if args.command != "scan":
         return 2
     try:
-        results, failed = scan(IngestionSettings.from_env())
+        settings = IngestionSettings.from_env()
+        results, failed = scan(settings) if args.dry_run else ingest(settings)
     except (IngestionError, ValueError) as error:
         code = error.code if isinstance(error, IngestionError) else "INVALID_CONFIG"
         print(json.dumps({"status": "failed", "code": code, "message": str(error)}))
@@ -324,16 +446,25 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     for result in results:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    if args.dry_run:
+        summary = {
+            "discovered": len(results),
+            "ready": len(results) - failed,
+            "failed": failed,
+            "dryRun": True,
+        }
+    else:
+        summary = {
+            "discovered": len(results),
+            **{
+                status: sum(result["status"] == status for result in results)
+                for status in {str(result["status"]) for result in results}
+            },
+            "dryRun": False,
+        }
     print(
         json.dumps(
-            {
-                "summary": {
-                    "discovered": len(results),
-                    "ready": len(results) - failed,
-                    "failed": failed,
-                    "dryRun": True,
-                }
-            },
+            {"summary": summary},
             sort_keys=True,
         )
     )
