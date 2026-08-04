@@ -21,8 +21,10 @@ services:
     environment:
       AI_PROVIDER: ${AI_PROVIDER:-demo}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
-      CLAUDE_API_BASE_URL: ${CLAUDE_API_BASE_URL:-}
-      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-3-5-sonnet-latest}
+      CLAUDE_API_BASE_URL: ${CLAUDE_API_BASE_URL:-https://claude.zunef.com/v1/ai}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
+      CLAUDE_CONNECT_TIMEOUT_SECONDS: ${CLAUDE_CONNECT_TIMEOUT_SECONDS:-5}
+      CLAUDE_READ_TIMEOUT_SECONDS: ${CLAUDE_READ_TIMEOUT_SECONDS:-45}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wikistock}:${POSTGRES_PASSWORD:-wikistock}@postgres:5432/${POSTGRES_DB:-wikistock}
     ports:
       - "${AI_SERVICE_PORT:-8000}:8000"
