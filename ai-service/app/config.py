@@ -23,6 +23,10 @@ class IngestionSettings:
     chunk_size_chars: int = 1800
     chunk_overlap_chars: int = 200
     chunk_version: str = "v1-page-block-1800-200"
+    database_url: str = ""
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_dimensions: int = 1024
+    embedding_batch_size: int = 8
 
     def __post_init__(self) -> None:
         if self.max_pdf_size_mb <= 0:
@@ -35,6 +39,12 @@ class IngestionSettings:
             )
         if not self.chunk_version.strip():
             raise ValueError("chunk_version must not be empty")
+        if not self.embedding_model.strip():
+            raise ValueError("EMBEDDING_MODEL must not be empty")
+        if self.embedding_dimensions <= 0:
+            raise ValueError("EMBEDDING_DIMENSIONS must be greater than zero")
+        if self.embedding_batch_size <= 0:
+            raise ValueError("EMBEDDING_BATCH_SIZE must be greater than zero")
 
     @classmethod
     def from_env(cls) -> "IngestionSettings":
@@ -46,4 +56,8 @@ class IngestionSettings:
             chunk_version=os.getenv(
                 "CHUNK_VERSION", "v1-page-block-1800-200"
             ),
+            database_url=os.getenv("DATABASE_URL", ""),
+            embedding_model=os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3"),
+            embedding_dimensions=_positive_int("EMBEDDING_DIMENSIONS", 1024),
+            embedding_batch_size=_positive_int("EMBEDDING_BATCH_SIZE", 8),
         )

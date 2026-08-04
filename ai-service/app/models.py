@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+class IngestionError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class Issue:
     code: str

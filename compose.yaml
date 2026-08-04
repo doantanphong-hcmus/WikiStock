@@ -10,6 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -30,11 +31,16 @@ services:
       CHUNK_SIZE_CHARS: ${CHUNK_SIZE_CHARS:-1800}
       CHUNK_OVERLAP_CHARS: ${CHUNK_OVERLAP_CHARS:-200}
       CHUNK_VERSION: ${CHUNK_VERSION:-v1-page-block-1800-200}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-8}
+      HF_HOME: /models
       DATABASE_URL: postgresql://${POSTGRES_USER:-wikistock}:${POSTGRES_PASSWORD:-wikistock}@postgres:5432/${POSTGRES_DB:-wikistock}
     ports:
       - "${AI_SERVICE_PORT:-8000}:8000"
     volumes:
       - ./docs/Seed_Daa/Báo cáo tài chính:/data/seed_data:ro
+      - model_cache:/models
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,3 +113,4 @@ services:
 
 volumes:
   postgres_data:
+  model_cache:
