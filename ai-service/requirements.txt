@@ -1,7 +1,5 @@
 fastapi
 uvicorn
 pydantic
-langchain
-llama-index
-pandas
 python-dotenv
+PyMuPDF
