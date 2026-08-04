@@ -25,9 +25,16 @@ services:
       CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
       CLAUDE_CONNECT_TIMEOUT_SECONDS: ${CLAUDE_CONNECT_TIMEOUT_SECONDS:-5}
       CLAUDE_READ_TIMEOUT_SECONDS: ${CLAUDE_READ_TIMEOUT_SECONDS:-45}
+      SEED_DATA_PATH: /data/seed_data
+      MAX_PDF_SIZE_MB: ${MAX_PDF_SIZE_MB:-100}
+      CHUNK_SIZE_CHARS: ${CHUNK_SIZE_CHARS:-1800}
+      CHUNK_OVERLAP_CHARS: ${CHUNK_OVERLAP_CHARS:-200}
+      CHUNK_VERSION: ${CHUNK_VERSION:-v1-page-block-1800-200}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wikistock}:${POSTGRES_PASSWORD:-wikistock}@postgres:5432/${POSTGRES_DB:-wikistock}
     ports:
       - "${AI_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - ./docs/Seed_Daa/Báo cáo tài chính:/data/seed_data:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -56,3 +56,23 @@ unset CLAUDE_API_KEY CLAUDE_REQUEST_BODY
 Before committing a captured response, remove dynamic IDs and inspect it for
 the API key or personal data. Do not manufacture 429 or 5xx fixtures: capture
 their real provider shape from documentation or an observed response.
+
+## PDF preflight
+
+R3 scans and validates PDF files without loading an embedding model, calling
+Claude, or writing to PostgreSQL.
+
+```bash
+cd ai-service
+python -m unittest discover -s tests
+
+SEED_DATA_PATH='../docs/Seed_Daa/Báo cáo tài chính' \
+  python -m app.ingestion scan --dry-run
+```
+
+With Docker Compose, the seed directory is mounted read-only at
+`/data/seed_data`:
+
+```bash
+docker compose run --rm ai-service python -m app.ingestion scan --dry-run
+```
