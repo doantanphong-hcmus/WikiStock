@@ -32,7 +32,8 @@ jobs:
       # IMPORTANT: pin to a real commit SHA before merging — replace the tag
       # below with the SHA returned by `git ls-remote https://github.com/gitleaks/gitleaks-action refs/tags/<tag>`.
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2.3.0 # TODO(ci): replace with pinned SHA before merge
+        # v2.3.0 pinned SHA — v2 runtime deprecated 2026-09-16, plan upgrade to v3
+        uses: gitleaks/gitleaks-action@1938557f6a58837331b99822ab17b8e536e7bef9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
