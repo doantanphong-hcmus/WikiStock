@@ -1,0 +1,150 @@
+name: Repository Policy
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  repository-policy:
+    name: Repository Policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout PR (full history)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Determine base ref
+        id: base
+        run: |
+          BASE="${{ github.event.pull_request.base.ref }}"
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "head=${{ github.head_ref }}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate PR target branch
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+          HEAD: ${{ steps.base.outputs.head }}
+        run: |
+          if [ "$BASE" = "main" ]; then
+            if [ "$HEAD" = "develop" ] || echo "$HEAD" | grep -Eq '^hotfix/[a-z0-9._-]+$'; then
+              echo "PR into main is allowed (head=$HEAD)."
+            else
+              echo "::error::PRs into 'main' must come from 'develop' or 'hotfix/*' (got '$HEAD')."
+              exit 1
+            fi
+          fi
+
+      - name: Validate branch name (Conventional prefix)
+        env:
+          HEAD: ${{ steps.base.outputs.head }}
+        run: |
+          if echo "$HEAD" | grep -Eq '^(feat|fix|chore|docs|refactor|test|perf|build|ci|hotfix|release)/[a-z0-9._-]+$'; then
+            echo "Branch name '$HEAD' matches policy."
+          else
+            echo "::error::Branch '$HEAD' does not match required regex ^(feat|fix|chore|docs|refactor|test|perf|build|ci|hotfix|release)/[a-z0-9._-]+$"
+            exit 1
+          fi
+
+      - name: Validate PR title (Conventional Commits)
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if echo "$TITLE" | grep -Eq '^(feat|fix|chore|docs|refactor|test|perf|build|ci|style|revert)(\([a-zA-Z0-9._-]+\))?!?: .+'; then
+            echo "PR title matches Conventional Commits."
+          else
+            echo "::error::PR title '$TITLE' does not match Conventional Commits regex (e.g. 'feat: short summary')."
+            exit 1
+          fi
+
+      - name: Determine merge-base and diff scope
+        id: scope
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          git fetch origin "$BASE" --depth=1
+          MERGE_BASE=$(git merge-base HEAD "origin/$BASE")
+          echo "merge_base=${MERGE_BASE}" >> "$GITHUB_OUTPUT"
+          git diff --name-only "${MERGE_BASE}..HEAD" > changed_files.txt
+          echo "Changed files:"
+          cat changed_files.txt
+
+      - name: Validate every commit message (Conventional Commits)
+        env:
+          MERGE_BASE: ${{ steps.scope.outputs.merge_base }}
+        run: |
+          FAIL=0
+          while IFS= read -r SUBJECT; do
+            [ -z "$SUBJECT" ] && continue
+            if ! echo "$SUBJECT" | grep -Eq '^(feat|fix|chore|docs|refactor|test|perf|build|ci|style|revert)(\([a-zA-Z0-9._-]+\))?!?: .+'; then
+              echo "::error::Commit subject '$SUBJECT' does not match Conventional Commits."
+              FAIL=1
+            fi
+          done < <(git log --pretty=%s "${MERGE_BASE}..HEAD")
+          if [ "$FAIL" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Detect whitespace and conflict markers
+        run: |
+          BASE="${{ steps.base.outputs.base }}"
+          git fetch origin "$BASE" --depth=1
+          if ! git diff --check "origin/$BASE...HEAD"; then
+            echo "::error::Found trailing whitespace or conflict markers in diff."
+            exit 1
+          fi
+
+      - name: Detect tracked secret files
+        run: |
+          set +e
+          MATCHES=$(git ls-files | grep -E '\.env$|\.env\.local$|\.env\.production$|\.env\.development$|credentials\.json$|\.npmrc$|\.pypirc$')
+          KEYS=$(git ls-files | xargs -I {} grep -lE '-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}' {} 2>/dev/null)
+          FAIL=0
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Tracked secret-like files detected:"
+            echo "$MATCHES"
+            FAIL=1
+          fi
+          if [ -n "$KEYS" ]; then
+            echo "::error::Tracked files containing private-key / API-key literals:"
+            echo "$KEYS"
+            FAIL=1
+          fi
+          [ "$FAIL" -eq 0 ] && echo "No tracked secret files found."
+          [ "$FAIL" -eq 0 ] || exit 1
+
+      - name: Schema coupling check
+        run: |
+          CHANGED=$(cat changed_files.txt)
+          SCHEMA_SQL_CHANGED=$(echo "$CHANGED" | grep -E '^schema\.sql$' || true)
+          SCHEMA_PRISMA_CHANGED=$(echo "$CHANGED" | grep -E '^backend/prisma/schema\.prisma$' || true)
+          if [ -n "$SCHEMA_SQL_CHANGED" ] && [ -z "$SCHEMA_PRISMA_CHANGED" ]; then
+            echo "::error::schema.sql changed but backend/prisma/schema.prisma did not."
+            exit 1
+          fi
+          if [ -n "$SCHEMA_PRISMA_CHANGED" ] && [ -z "$SCHEMA_SQL_CHANGED" ]; then
+            echo "::error::backend/prisma/schema.prisma changed but schema.sql did not."
+            exit 1
+          fi
+
+      - name: API contract coupling check
+        run: |
+          CHANGED=$(cat changed_files.txt)
+          TYPES_CHANGED=$(echo "$CHANGED" | grep -E '^backend/src/common/types/api\.types\.ts$' || true)
+          CONTRACT_CHANGED=$(echo "$CHANGED" | grep -E '^docs/API_CONTRACT\.md$' || true)
+          if [ -n "$TYPES_CHANGED" ] && [ -z "$CONTRACT_CHANGED" ]; then
+            echo "::error::backend/src/common/types/api.types.ts changed but docs/API_CONTRACT.md did not."
+            exit 1
+          fi
