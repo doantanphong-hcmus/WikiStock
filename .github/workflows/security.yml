@@ -1,0 +1,38 @@
+name: Secret Scanning
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Workflow-level permissions: read-only on contents. No `packages: write`,
+# no `write-all`. The secret-scan job re-declares this explicitly below
+# so the principle of least privilege is visible at the job level too.
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      # Gitleaks is the primary scanner because it works regardless of whether
+      # the repo's GitHub plan enables native Secret Scanning.
+      # IMPORTANT: pin to a real commit SHA before merging — replace the tag
+      # below with the SHA returned by `git ls-remote https://github.com/gitleaks/gitleaks-action refs/tags/<tag>`.
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2.3.0 # TODO(ci): replace with pinned SHA before merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
