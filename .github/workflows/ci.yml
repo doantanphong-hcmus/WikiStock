@@ -83,3 +83,67 @@ jobs:
       - name: Ensure worktree is clean
         working-directory: backend
         run: git diff --exit-code
+
+  frontend-quality:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        env:
+          # Build-time placeholder, only used by Next.js client bundle. The CI job
+          # never calls the backend at runtime.
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api/v1
+        run: npm run build
+
+  ai-service-quality:
+    name: AI Service Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478c79b6981d # v5.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Compile Python sources
+        working-directory: ai-service
+        run: |
+          python -m compileall -q .
+          echo "ai-service compileall passed."
+
+      # NOTE: requirements.txt is intentionally NOT installed here.
+      # The current set pulls fastapi/uvicorn/pydantic/langchain/llama-index/pandas/python-dotenv
+      # which is still manageable, but a future RAG test suite will likely add
+      # heavier deps (BGE-M3, sentence-transformers, FAISS). When that suite
+      # appears, switch this job to:
+      #   - pip cache (actions/setup-python already enables it via cache pip)
+      #   - pip install -r requirements.txt
+      #   - pytest with a fake provider fixture for offline inference tests.
+      # Keeping the baseline at compileall keeps PR CI fast and dependency-free.
