@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 @theme inline {
+  /* Fonts */
+  --font-sans: Roboto, Arial, Helvetica, sans-serif;
+  --font-display: "DM Sans", system-ui, sans-serif;
+  --font-accent: "Crimson Text", "Georgia", serif;
+  --font-body: "Poppins", "Georgia", sans-serif;
+
+  /* Colors */
   --color-navy: #0f172a;
   --color-company-blue: #1f419b;
   --color-company-blue-hover: #18357a;
@@ -9,22 +16,33 @@
   --color-surface: #ffffff;
   --color-soft-surface: #f8fafc;
   --color-border: #dee5ed;
-  --color-text-primary: #232323;
-  --color-text-secondary: #616161;
+  --color-border-light: #abb7c2;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #486284;
+  --color-text-muted: #abb7c2;
   --color-muted: #8d8d8d;
+  --color-cyan: #1cd8d2;
+  --color-mint: #93edc7;
   --color-success: #198038;
   --color-warning: #f1c21b;
   --color-danger: #da1e28;
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Radii */
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-badge: 6px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 12px rgba(13, 10, 44, 0.06);
 }
 
 body {
   background: var(--color-background);
   color: var(--color-text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
 }
 
 a {
   color: inherit;
+  text-decoration: none;
 }
