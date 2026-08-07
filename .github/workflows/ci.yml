@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   backend-quality:
-    name: Backend Quality
+    name: backend-quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -85,7 +85,7 @@ jobs:
         run: git diff --exit-code
 
   frontend-quality:
-    name: Frontend Quality
+    name: frontend-quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -118,7 +118,7 @@ jobs:
         run: npm run build
 
   ai-service-quality:
-    name: AI Service Quality
+    name: ai-service-quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -132,24 +132,20 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install dependencies
+        working-directory: ai-service
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        working-directory: ai-service
+        run: python -m unittest discover -s tests
+
       - name: Compile Python sources
         working-directory: ai-service
-        run: |
-          python -m compileall -q .
-          echo "ai-service compileall passed."
-
-      # NOTE: requirements.txt is intentionally NOT installed here.
-      # The current set pulls fastapi/uvicorn/pydantic/langchain/llama-index/pandas/python-dotenv
-      # which is still manageable, but a future RAG test suite will likely add
-      # heavier deps (BGE-M3, sentence-transformers, FAISS). When that suite
-      # appears, switch this job to:
-      #   - pip cache (actions/setup-python already enables it via cache pip)
-      #   - pip install -r requirements.txt
-      #   - pytest with a fake provider fixture for offline inference tests.
-      # Keeping the baseline at compileall keeps PR CI fast and dependency-free.
+        run: python -m compileall -q .
 
   container-build:
-    name: Container Build
+    name: container-build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

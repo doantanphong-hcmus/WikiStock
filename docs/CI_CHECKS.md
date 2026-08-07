@@ -56,7 +56,7 @@ git diff --check "origin/$BASE...HEAD"
 
 # Tracked secret files
 git ls-files | grep -E '\.env$|\.env\.local$|credentials\.json$|\.npmrc$|\.pypirc$'
-git ls-files | xargs grep -lE '-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}'
+git ls-files | xargs grep -lE -- '-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}'
 
 # Schema coupling
 git diff --name-only "${MERGE_BASE}..HEAD" | grep -E '^(schema\.sql|backend/prisma/schema\.prisma)$'
