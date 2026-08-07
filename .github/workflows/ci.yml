@@ -160,7 +160,9 @@ jobs:
       - name: Validate compose file
         env:
           JWT_SECRET: ci-placeholder-secret-not-used-in-prod
-        run: docker compose config
+        run: |
+          export JWT_SECRET
+          docker compose config
 
       - name: Build backend image
         uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.10.0
