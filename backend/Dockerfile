@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npx prisma generate && npm run build
+RUN DATABASE_URL="postgresql://postgres:postgres@localhost:5432/wikistock" npx prisma generate && npm run build
 
 EXPOSE 3001
 
