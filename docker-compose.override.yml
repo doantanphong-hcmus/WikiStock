@@ -1,0 +1,23 @@
+# File này TỰ ĐỘNG được Docker Compose merge vào docker-compose.yml
+# khi chạy `docker compose up` ở máy local — không cần khai báo gì thêm.
+#
+# Mục đích: mở các port của Postgres, Redis, AI-service ra host để
+# tiện debug bằng DBeaver, RedisInsight, Postman... trong lúc phát triển.
+#
+# Khi deploy production, KHÔNG dùng file này, chỉ chạy:
+#   docker compose -f docker-compose.yml up -d
+# để giữ các service nội bộ (DB, Redis, AI) không bị lộ ra ngoài.
+
+services:
+  postgres:
+    ports:
+      - "5433:5432"
+
+  redis:
+    ports:
+      - "6380:6379"
+
+  ai-service:
+    ports:
+      - "8001:8000"
+      
