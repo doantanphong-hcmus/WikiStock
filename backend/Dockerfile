@@ -3,19 +3,16 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for caching
 COPY package.json package-lock.json* ./
 
-# Install all dependencies (including devDependencies for build)
+# Install dependencies (includes @prisma/client)
 RUN npm ci
-
-# Generate Prisma client
-RUN npx prisma generate
 
 # Copy source code
 COPY . .
 
-# Build TypeScript
+# Build TypeScript (prisma client is already in node_modules)
 RUN npm run build
 
 # Start application
