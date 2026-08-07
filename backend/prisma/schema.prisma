@@ -167,16 +167,16 @@ model SourceDocument {
 }
 
 model DocumentChunk {
-  chunkId     Int                          @id @default(autoincrement()) @map("chunk_id")
-  documentId  Int                          @map("document_id")
-  chunkIndex  Int                          @map("chunk_index")
-  pageNumber  Int                          @map("page_number")
-  locationRef String                       @map("location_ref") @db.VarChar(100)
-  content     String                       @db.Text
-  charCount   Int                          @map("char_count")
-  contentHash String                       @map("content_hash") @db.VarChar(64)
-  embedding   Unsupported("vector(1024)")?
-  createdAt   DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  chunkId     Int       @id @default(autoincrement()) @map("chunk_id")
+  documentId  Int       @map("document_id")
+  chunkIndex  Int       @map("chunk_index")
+  pageNumber  Int       @map("page_number")
+  locationRef String    @map("location_ref") @db.VarChar(100)
+  content     String    @db.Text
+  charCount   Int       @map("char_count")
+  contentHash String    @map("content_hash") @db.VarChar(64)
+  // Note: embedding storage is handled separately by pgvector in ai-service
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   document SourceDocument @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
   citation Citation?
