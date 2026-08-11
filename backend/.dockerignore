@@ -1,5 +1,39 @@
+# Dependencies
 node_modules
-dist
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+# dist (built by RUN npm run build in Dockerfile)
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Testing
 coverage
-.env*
+.nyc_output
+
+# Prisma
+prisma/migrations
+
+# Misc
 *.log
+README.md
+*.md
+test

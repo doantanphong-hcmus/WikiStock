@@ -23,11 +23,28 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
+  // Add auth token if available
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
   const response = await fetch(buildUrl(path), {
     ...init,
     headers,
     cache: init.cache ?? "no-store",
   });
+
+  // Handle 401 Unauthorized
+  if (response.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
+      window.location.href = "/login";
+    }
+    throw new ApiError("Unauthorized", 401);
+  }
 
   let payload: ApiResponse<T> | null = null;
 
@@ -37,7 +54,7 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     throw new ApiError("Backend response is not valid JSON", response.status);
   }
 
-  if (!response.ok || payload.error || payload.statusCode >= 400) {
+  if (!response.ok || payload.error || (payload.statusCode && payload.statusCode >= 400)) {
     throw new ApiError(
       payload.message || "Backend request failed",
       payload.statusCode || response.status,
@@ -48,6 +65,7 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   return payload.data as T;
 }
 
+// GET request
 export function apiGet<T>(path: string, init: RequestInit = {}) {
   return request<T>(path, {
     ...init,
@@ -55,6 +73,7 @@ export function apiGet<T>(path: string, init: RequestInit = {}) {
   });
 }
 
+// POST request
 export function apiPost<TResponse, TPayload = unknown>(
   path: string,
   payload: TPayload,
@@ -64,5 +83,26 @@ export function apiPost<TResponse, TPayload = unknown>(
     ...init,
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+// PUT request
+export function apiPut<TResponse, TPayload = unknown>(
+  path: string,
+  payload: TPayload,
+  init: RequestInit = {},
+) {
+  return request<TResponse>(path, {
+    ...init,
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+// DELETE request
+export function apiDelete<T>(path: string, init: RequestInit = {}) {
+  return request<T>(path, {
+    ...init,
+    method: "DELETE",
   });
 }

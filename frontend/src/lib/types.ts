@@ -129,3 +129,88 @@ export interface AdminCompanyStatus {
   sourceStatus: string;
   lastUpdated: string;
 }
+
+// Dashboard types
+export interface ExchangeSummary {
+  exchangeId: number;
+  exchangeCode: string;
+  exchangeName: string;
+}
+
+export interface IndustrySummary {
+  industryId: number;
+  industryCode: string;
+  industryName: string;
+}
+
+export interface FinancialChartPoint {
+  period: string;
+  revenue: number;
+  netProfit: number;
+  totalAssets: number;
+  liabilities: number;
+  equity: number;
+}
+
+export interface Leader {
+  id: string;
+  name: string;
+  position: string;
+  avatar: string;
+  bio: string;
+  tenureStart: string;
+}
+
+export interface DashboardCompany {
+  companyId: number;
+  ticker: string;
+  companyName: string;
+  exchange: ExchangeSummary;
+  industry: IndustrySummary;
+  summary?: string;
+  description?: string;
+  website?: string;
+  ceo?: string;
+  sources?: string[];
+  marketCap?: number;
+  sharePrice?: number;
+  change?: number;
+  changePercent?: number;
+  peRatio?: number;
+  pbRatio?: number;
+  eps?: number;
+  dividendYield?: number;
+  volume?: number;
+  high52Week?: number;
+  low52Week?: number;
+  financialChartData?: FinancialChartPoint[];
+  leaders?: Leader[];
+  citations?: Citation[];
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  date: string;
+  source: string;
+  category: string;
+  url: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  date: string;
+  title: string;
+  description?: string;
+  type: string;
+}
+
+export interface RiskIndicator {
+  id: string;
+  name: string;
+  level: string;
+  score: number;
+  description?: string;
+  trend?: string;
+}
