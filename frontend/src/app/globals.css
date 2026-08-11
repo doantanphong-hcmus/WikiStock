@@ -1,11 +1,14 @@
 @import "tailwindcss";
 
+/* Import Google Fonts for Vietnamese support */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;600;700&display=swap');
+
 @theme inline {
   /* Fonts */
-  --font-sans: Roboto, Arial, Helvetica, sans-serif;
-  --font-display: "DM Sans", system-ui, sans-serif;
+  --font-sans: Roboto, "Open Sans", "Noto Sans", "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-display: "Poppins", "Open Sans", "Roboto", "Segoe UI", sans-serif;
   --font-accent: "Crimson Text", "Georgia", serif;
-  --font-body: "Poppins", "Georgia", sans-serif;
+  --font-body: "Poppins", "Open Sans", "Roboto", "Segoe UI", sans-serif;
 
   /* Colors - Primary Brand */
   --color-navy: #0f172a;

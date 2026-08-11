@@ -4,7 +4,7 @@ npm-debug.log
 yarn-error.log
 
 # Build outputs
-dist
+# dist (built by RUN npm run build in Dockerfile)
 
 # Environment files
 .env

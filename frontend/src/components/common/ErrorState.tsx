@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/Button";
 
+const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
+const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
+
 interface ErrorStateProps {
   title?: string;
   message?: string;
@@ -37,7 +40,7 @@ export function ErrorState({
 
       <h3
         className="mb-2 text-lg font-semibold"
-        style={{ color: "#0f172a", fontFamily: "var(--font-sans)" }}
+        style={{ color: "#0f172a", fontFamily: fontSans }}
       >
         {title}
       </h3>
@@ -45,7 +48,7 @@ export function ErrorState({
       {message && (
         <p
           className="mb-4 max-w-md text-sm"
-          style={{ color: "#64748b", fontFamily: "var(--font-body)" }}
+          style={{ color: "#64748b", fontFamily: fontBody }}
         >
           {message}
         </p>

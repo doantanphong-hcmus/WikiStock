@@ -1,6 +1,9 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppFooter } from "@/components/layout/AppFooter";
 
+const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
+const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
+
 const pricingPlans = [
   {
     name: "Free",
@@ -57,10 +60,10 @@ export default function PricingPage() {
       <section className="relative py-20">
         <div className="mx-auto px-[110px]" style={{ maxWidth: 1440 }}>
           <div className="text-center">
-            <h1 className="mb-6 text-5xl font-bold" style={{ fontFamily: "var(--font-sans)", color: "#FFFFFF" }}>
-              Pricing
+            <h1 className="mb-6 text-5xl font-bold" style={{ fontFamily: fontSans, color: "#FFFFFF" }}>
+              Bảng giá
             </h1>
-            <p className="mx-auto max-w-2xl text-xl" style={{ fontFamily: "var(--font-body)", color: "#94A3B8", lineHeight: 1.6 }}>
+            <p className="mx-auto max-w-2xl text-xl" style={{ fontFamily: fontBody, color: "#94A3B8", lineHeight: 1.6 }}>
               Các gói dịch vụ. Mang đến những trải nghiệm khác biệt,
               tiện ích, mở khóa các chức năng đặc biệt.
             </p>
@@ -82,29 +85,29 @@ export default function PricingPage() {
               {plan.popular && (
                 <div
                   className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-sm font-semibold"
-                  style={{ background: "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)", color: "#0F172A", fontFamily: "var(--font-body)" }}
+                  style={{ background: "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)", color: "#0F172A", fontFamily: fontBody }}
                 >
-                  Most Popular
+                  Phổ biến nhất
                 </div>
               )}
 
-              <h3 className="mb-2 text-2xl font-bold" style={{ fontFamily: "var(--font-sans)", color: "#FFFFFF" }}>
+              <h3 className="mb-2 text-2xl font-bold" style={{ fontFamily: fontSans, color: "#FFFFFF" }}>
                 {plan.name}
               </h3>
 
               <div className="mb-4 flex items-baseline gap-1">
                 <span
                   className="text-5xl font-bold"
-                  style={{ fontFamily: "var(--font-sans)", color: plan.popular ? "#1CD8D2" : "#FFFFFF" }}
+                  style={{ fontFamily: fontSans, color: plan.popular ? "#1CD8D2" : "#FFFFFF" }}
                 >
                   {plan.price}
                 </span>
-                <span className="text-base" style={{ fontFamily: "var(--font-body)", color: "#64748B" }}>
+                <span className="text-base" style={{ fontFamily: fontBody, color: "#64748B" }}>
                   {plan.period}
                 </span>
               </div>
 
-              <p className="mb-6 text-sm" style={{ fontFamily: "var(--font-body)", color: "#94A3B8" }}>
+              <p className="mb-6 text-sm" style={{ fontFamily: fontBody, color: "#94A3B8" }}>
                 {plan.description}
               </p>
 
@@ -116,7 +119,7 @@ export default function PricingPage() {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={plan.popular ? "#1CD8D2" : "#94A3B8"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    <span className="text-sm" style={{ fontFamily: "var(--font-body)", color: "#CBD5E1" }}>
+                    <span className="text-sm" style={{ fontFamily: fontBody, color: "#CBD5E1" }}>
                       {feature}
                     </span>
                   </li>
@@ -126,12 +129,12 @@ export default function PricingPage() {
               <button
                 className="w-full rounded-xl py-3.5 text-base font-semibold transition-all hover:opacity-90"
                 style={{
-                  fontFamily: "var(--font-body)",
+                  fontFamily: fontBody,
                   background: plan.popular ? "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)" : "#334155",
                   color: plan.popular ? "#0F172A" : "#FFFFFF",
                 }}
               >
-                {plan.cta}
+                {plan.cta === "Get started" ? "Bắt đầu" : plan.cta === "Extend" ? "Mở rộng" : plan.cta}
               </button>
             </div>
           ))}

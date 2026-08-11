@@ -12,10 +12,13 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build TypeScript (prisma client is already in node_modules)
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build TypeScript
 RUN npm run build
 
 # Start application
 EXPOSE 3001
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]

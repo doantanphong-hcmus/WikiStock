@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/Button";
 
+const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
+const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
+
 interface EmptyStateProps {
   title?: string;
   message?: string;
@@ -73,7 +76,7 @@ export function EmptyState({
 
       <h3
         className="mb-2 text-lg font-semibold"
-        style={{ color: "#f8fafc", fontFamily: "var(--font-sans)" }}
+        style={{ color: "#f8fafc", fontFamily: fontSans }}
       >
         {title}
       </h3>
@@ -81,7 +84,7 @@ export function EmptyState({
       {message && (
         <p
           className="mb-6 max-w-md text-sm"
-          style={{ color: "#94a3b8", fontFamily: "var(--font-body)" }}
+          style={{ color: "#94a3b8", fontFamily: fontBody }}
         >
           {message}
         </p>

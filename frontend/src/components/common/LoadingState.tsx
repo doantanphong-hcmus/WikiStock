@@ -1,3 +1,5 @@
+const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
+
 export function LoadingState({ label = "Đang tải dữ liệu..." }: { label?: string }) {
   return (
     <div
@@ -12,7 +14,7 @@ export function LoadingState({ label = "Đang tải dữ liệu..." }: { label?:
       </div>
       <p
         className="mt-4 text-sm"
-        style={{ color: "#94a3b8", fontFamily: "var(--font-body)" }}
+        style={{ color: "#94a3b8", fontFamily: fontBody }}
       >
         {label}
       </p>

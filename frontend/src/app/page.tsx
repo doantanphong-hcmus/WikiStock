@@ -3,6 +3,9 @@ import Link from "next/link";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppFooter } from "@/components/layout/AppFooter";
 
+const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
+const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
+
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col" style={{ background: "#D9D9D9" }}>
@@ -49,7 +52,7 @@ export default function HomePage() {
               <h1
                 className="text-[64px] font-bold leading-[72px]"
                 style={{
-                  fontFamily: "var(--font-sans)",
+                  fontFamily: fontSans,
                   color: "#FFFFFF",
                 }}
               >
@@ -58,7 +61,7 @@ export default function HomePage() {
               <p
                 className="text-xl font-normal leading-7"
                 style={{
-                  fontFamily: "var(--font-body)",
+                  fontFamily: fontBody,
                   color: "#94A3B8",
                   maxWidth: 520,
                 }}
@@ -115,10 +118,10 @@ export default function HomePage() {
               </button>
               <input
                 name="q"
-                placeholder="Search ..."
+                placeholder="Tìm kiếm..."
                 className="flex-1 bg-transparent text-lg outline-none"
                 style={{
-                  fontFamily: "var(--font-body)",
+                  fontFamily: fontBody,
                   color: "#94A3B8",
                 }}
               />
@@ -149,12 +152,12 @@ export default function HomePage() {
           <h2
             className="text-center text-xl font-bold"
             style={{
-              fontFamily: "var(--font-sans)",
+              fontFamily: fontSans,
               letterSpacing: "0.5px",
               color: "#000000",
             }}
           >
-            OUR TRUSTED RESOURCES
+            NGUỒN TIN CẬY NHẬT
           </h2>
 
           <div
@@ -223,11 +226,11 @@ export default function HomePage() {
                 height={24}
               />
             </div>
-            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: "var(--font-sans)" }}>
-              Chat with AI
+            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+              Trò chuyện với AI
             </h3>
-            <p className="text-sm text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-              Ask questions about companies and stock information
+            <p className="text-sm text-slate-400" style={{ fontFamily: fontBody }}>
+              Đặt câu hỏi về doanh nghiệp và thông tin chứng khoán
             </p>
           </Link>
 
@@ -250,11 +253,11 @@ export default function HomePage() {
                 height={24}
               />
             </div>
-            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: "var(--font-sans)" }}>
-              Browse Companies
+            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+              Danh sách doanh nghiệp
             </h3>
-            <p className="text-sm text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-              Explore listed companies and their details
+            <p className="text-sm text-slate-400" style={{ fontFamily: fontBody }}>
+              Khám phá các doanh nghiệp niêm yết và chi tiết của chúng
             </p>
           </Link>
 
@@ -277,11 +280,11 @@ export default function HomePage() {
                 height={24}
               />
             </div>
-            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: "var(--font-sans)" }}>
-              Market Overview
+            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+              Tổng quan thị trường
             </h3>
-            <p className="text-sm text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-              View real-time market data and trends
+            <p className="text-sm text-slate-400" style={{ fontFamily: fontBody }}>
+              Xem dữ liệu và xu hướng thị trường theo thời gian thực
             </p>
           </Link>
         </div>

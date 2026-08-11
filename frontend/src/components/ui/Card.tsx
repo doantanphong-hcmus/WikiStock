@@ -9,14 +9,14 @@ interface CardProps {
   hover?: boolean;
 }
 
-const variantStyles: Record<CardProps["variant"], string> = {
+const variantStyles: Record<NonNullable<CardProps["variant"]>, string> = {
   surface: "bg-white border border-[#dee5ed]",
   soft: "bg-[#f8fafc] border border-[#dee5ed]",
   dark: "bg-[#1e293b] border border-[#334155]",
   gradient: "bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-[#334155]",
 };
 
-const paddingStyles: Record<CardProps["padding"], string> = {
+const paddingStyles: Record<NonNullable<CardProps["padding"]>, string> = {
   none: "",
   small: "p-4",
   default: "p-6",
