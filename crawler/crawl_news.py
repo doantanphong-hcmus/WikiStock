@@ -92,8 +92,11 @@ def crawl_company_news(ticker, company_id):
                 except Exception:
                     pass
 
-            # Insert news_article (upsert by url)
+            # Insert news_article (upsert by url) with savepoint for error isolation
+            savepoint_name = f'savepoint_article_{stats["articles_saved"]}'
             try:
+                cursor.execute(f"SAVEPOINT {savepoint_name}")
+
                 cursor.execute("""
                     INSERT INTO news_article (source_id, title, url, published_at, summary)
                     VALUES (%s, %s, %s, %s, %s)
@@ -113,16 +116,24 @@ def crawl_company_news(ticker, company_id):
                     ON CONFLICT (article_id, company_id) DO NOTHING
                 """, (article_id, company_id))
 
+                cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                 print(f"  [{ticker}] [OK] {title[:70]}...")
                 stats['articles_saved'] += 1
 
             except Exception as e:
+                # Rollback to savepoint to recover from error, continue with next article
+                cursor.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name}")
                 print(f"  [{ticker}] ERROR saving article: {e}")
-                # Continue with next article
 
         conn.commit()
-        stats['success'] = True
-        print(f"[{ticker}] News: {stats['articles_saved']}/{stats['articles_found']} articles saved")
+        # Only report success if we actually saved some articles or found none
+        # If we had articles found but saved 0 due to errors, that's a partial failure
+        if stats['articles_found'] > 0 and stats['articles_saved'] == 0:
+            stats['success'] = False
+            print(f"[{ticker}] News FAIL: found {stats['articles_found']} but saved 0")
+        else:
+            stats['success'] = True
+            print(f"[{ticker}] News: {stats['articles_saved']}/{stats['articles_found']} articles saved")
         if stats['articles_skipped_no_url'] > 0:
             print(f"  (skipped {stats['articles_skipped_no_url']} articles without valid URL)")
 

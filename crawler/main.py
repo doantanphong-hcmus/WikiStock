@@ -15,6 +15,100 @@ from crawl_news import crawl_company_news
 from db import get_connection
 
 
+# Required metrics that must be present for a ticker to be considered successful
+REQUIRED_METRICS = {'REVENUE', 'NET_PROFIT', 'TOTAL_LIABILITIES'}
+# Financial ratios that should be present (at least one quarter)
+REQUIRED_RATIOS = {'ROE', 'ROA', 'PE', 'GROSS_MARGIN'}
+# Banks don't have GROSS_MARGIN in their financial statements
+BANK_TICKERS = {'VCB'}
+# Minimum number of quarters required
+MIN_QUARTERS = 4
+
+
+def validate_ticker_data(ticker):
+    """
+    Validate that a ticker has all required data in the database.
+    Returns (is_valid, missing_data_dict)
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    missing = {
+        'quarters': [],
+        'metrics': [],
+        'ratios': [],
+        'news_count': 0
+    }
+
+    try:
+        # Check number of quarters
+        cursor.execute("""
+            SELECT fiscal_year, fiscal_quarter
+            FROM financial_report fr
+            JOIN company c ON c.company_id = fr.company_id
+            WHERE c.ticker = %s AND fr.period_type = 'Q'
+            ORDER BY fiscal_year DESC, fiscal_quarter DESC
+        """, (ticker,))
+        quarters = cursor.fetchall()
+
+        if len(quarters) < MIN_QUARTERS:
+            missing['quarters'] = [f'{y}-Q{q}' for y, q in quarters] if quarters else []
+
+        # Check required metrics (at least one quarter must have all)
+        for metric in REQUIRED_METRICS:
+            cursor.execute("""
+                SELECT COUNT(DISTINCT fr.report_id)
+                FROM financial_line_item fli
+                JOIN financial_report fr ON fr.report_id = fli.report_id
+                JOIN company c ON c.company_id = fr.company_id
+                JOIN metric m ON m.metric_id = fli.metric_id
+                WHERE c.ticker = %s AND m.metric_code = %s AND fli.value IS NOT NULL
+            """, (ticker, metric))
+            count = cursor.fetchone()[0]
+            if count == 0:
+                missing['metrics'].append(metric)
+
+        # Check financial ratios (at least one quarter should have these)
+        for ratio in REQUIRED_RATIOS:
+            # Skip GROSS_MARGIN for banks
+            if ticker in BANK_TICKERS and ratio == 'GROSS_MARGIN':
+                continue
+            cursor.execute("""
+                SELECT COUNT(DISTINCT fr.report_id)
+                FROM financial_line_item fli
+                JOIN financial_report fr ON fr.report_id = fli.report_id
+                JOIN company c ON c.company_id = fr.company_id
+                JOIN metric m ON m.metric_id = fli.metric_id
+                WHERE c.ticker = %s AND m.metric_code = %s AND fli.value IS NOT NULL
+            """, (ticker, ratio))
+            count = cursor.fetchone()[0]
+            if count == 0:
+                missing['ratios'].append(ratio)
+
+        # Check news count
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM news_article_company nac
+            JOIN company c ON c.company_id = nac.company_id
+            WHERE c.ticker = %s
+        """, (ticker,))
+        missing['news_count'] = cursor.fetchone()[0]
+
+        # Determine validity
+        is_valid = (
+            len(quarters) >= MIN_QUARTERS and
+            len(missing['metrics']) == 0 and
+            len(missing['ratios']) == 0 and
+            missing['news_count'] > 0
+        )
+
+        return is_valid, missing
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def write_ingestion_log(stats_summary):
     """
     Record this run in the schema-provided ingestion log.
@@ -115,8 +209,10 @@ def main():
             news_stats = crawl_company_news(ticker, company_id)
             ticker_stats['news_articles'] = news_stats.get('articles_saved', 0)
 
-            # Count as success only if we have company + at least 1 financial report
-            if ticker_stats['company'] and ticker_stats['financial_reports'] > 0:
+            # Validate that all required data is present
+            is_valid, missing = validate_ticker_data(ticker)
+
+            if ticker_stats['company'] and ticker_stats['financial_reports'] > 0 and is_valid:
                 stats['companies_processed'] += 1
                 stats['financial_reports'] += ticker_stats['financial_reports']
                 stats['financial_line_items'] += ticker_stats['financial_line_items']
@@ -125,7 +221,24 @@ def main():
                       f"{ticker_stats['financial_line_items']} line_items, "
                       f"{ticker_stats['news_articles']} news")
             else:
-                raise Exception("Insufficient data: missing company or financial reports")
+                # Build detailed error message
+                error_parts = []
+                if not ticker_stats['company']:
+                    error_parts.append("missing company profile")
+                if ticker_stats['financial_reports'] == 0:
+                    error_parts.append("no financial reports")
+                if len(missing['quarters']) > 0:
+                    quarters_found = len(missing['quarters'])
+                    error_parts.append(f"only {quarters_found}/4 quarters")
+                if missing['metrics']:
+                    error_parts.append(f"missing metrics: {', '.join(missing['metrics'])}")
+                if missing['ratios']:
+                    error_parts.append(f"missing ratios: {', '.join(missing['ratios'])}")
+                if missing['news_count'] == 0:
+                    error_parts.append("no news articles")
+
+                error_msg = "; ".join(error_parts) if error_parts else "Insufficient data"
+                raise Exception(error_msg)
 
             stats['ticker_details'][ticker] = ticker_stats
 
@@ -155,9 +268,9 @@ def main():
     print("\n--- Per-Ticker Breakdown ---")
     for ticker, t_stats in stats['ticker_details'].items():
         if t_stats['error']:
-            print(f"{ticker}: ERROR - {t_stats['error']}")
+            print(f"{ticker}: FAIL - {t_stats['error']}")
         else:
-            print(f"{ticker}: [OK] {t_stats['financial_reports']} reports, "
+            print(f"{ticker}: OK - {t_stats['financial_reports']} reports, "
                   f"{t_stats['financial_line_items']} items, "
                   f"{t_stats['news_articles']} news")
 

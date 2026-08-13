@@ -23,14 +23,14 @@ cp .env.example .env
 # Chỉnh sửa .env với thông tin database của bạn
 ```
 
-### 4. Seed lookup tables
-```bash
-python seed_lookup.py
-```
-
-### 5. Khởi tạo schema
+### 4. Khởi tạo database (chỉ chạy lần đầu — schema.sql không hỗ trợ chạy lại trên database đã có bảng)
 ```bash
 python setup_db.py
+```
+
+### 5. Seed lookup tables
+```bash
+python seed_lookup.py
 ```
 
 ### 6. Chạy crawler
@@ -39,8 +39,8 @@ python main.py
 ```
 
 ## Thứ tự chạy đúng
-1. `seed_lookup.py` — Tạo các bảng lookup (metric, data_source)
-2. `setup_db.py`  — Áp dụng schema.sql chuẩn (chạy lại nếu cần reset)
+1. `setup_db.py`  — Áp dụng schema.sql chuẩn (chỉ chạy lần đầu; không hỗ trợ chạy lại để reset trên database đã có bảng)
+2. `seed_lookup.py` — Tạo các bảng lookup (metric, data_source)
 3. `main.py`       — Chạy pipeline đầy đủ cho 10 mã cổ phiếu
 
 ## Demo Stocks
@@ -55,3 +55,4 @@ Mã cổ phiếu demo: FPT, GAS, HPG, HSG, MWG, SSI, VCB, VCG, VIC, VNM
 - `crawl_company.py`   - Thu thập hồ sơ công ty
 - `crawl_financial.py` - Thu thập báo cáo tài chính
 - `crawl_news.py`      - Thu thập tin tức
+- `check_requirements.py` - Kiểm tra dữ liệu đã thu thập đủ chưa

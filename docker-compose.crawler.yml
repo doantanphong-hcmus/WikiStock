@@ -1,0 +1,24 @@
+# Docker compose for crawler service
+# Run with: docker compose -f docker-compose.yml -f docker-compose.crawler.yml up crawler
+
+services:
+  crawler:
+    build:
+      context: ./crawler
+      dockerfile: Dockerfile
+    container_name: wikistock_crawler
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: app_db
+      DB_USER: app_user
+      DB_PASSWORD: app_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
+networks:
+  wikistock_app_network:
+    external: true

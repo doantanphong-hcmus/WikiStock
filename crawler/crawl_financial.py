@@ -30,6 +30,7 @@ REQUIRED_METRICS = {'REVENUE', 'NET_PROFIT', 'TOTAL_LIABILITIES'}
 BS_MAPPING = {
     'total_assets': 'TOTAL_ASSETS',
     'liabilities': 'TOTAL_LIABILITIES',
+    'total_liabilities': 'TOTAL_LIABILITIES',  # For banks (VCB)
     'owners_equity': 'TOTAL_EQUITY',
     'current_assets': 'SHORT_TERM_ASSETS',
     'long_term_assets': 'LONG_TERM_ASSETS',
@@ -38,8 +39,10 @@ BS_MAPPING = {
 }
 
 # Income Statement
+# Note: Banks (VCB) use 'total_operating_income' instead of 'net_sales'
 IS_MAPPING = {
     'net_sales': 'REVENUE',
+    'total_operating_income': 'REVENUE',  # For banks (VCB)
     'gross_profit': 'GROSS_PROFIT',
     'operating_profit_loss': 'OPERATING_PROFIT',
     'net_profit_loss_after_tax': 'NET_PROFIT',
@@ -184,7 +187,8 @@ def normalize_value(value, metric_code):
         val = float(value)
 
         # Handle infinity or extremely large values (likely data error)
-        if abs(val) > 1e15:
+        # VCI returns values in VND; large companies like banks can have >1 quadrillion VND
+        if abs(val) > 1e19:  # ~10 quintillion, safe upper bound
             print(f"  [WARN] Suspiciously large value {val}, skipping")
             return None
 
