@@ -72,3 +72,17 @@ class RetrievalResult:
     is_confident: bool
     evidence: tuple[RetrievedChunk, ...]
     duration_ms: float
+
+
+@dataclass(frozen=True)
+class EvidenceIdentity:
+    chunk_id: int
+    document_id: int
+
+
+@dataclass(frozen=True)
+class GeneratedAnswer:
+    answer: str
+    is_confident: bool
+    evidence: tuple[EvidenceIdentity, ...]
+    limitations: str | None = None
