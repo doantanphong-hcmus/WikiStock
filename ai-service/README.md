@@ -177,3 +177,53 @@ The expected invariant values are `documents = 12`, `ready = 12`,
 `duplicate_checksums = 0`, `invalid_embeddings = 0`, and
 `orphan_citations = 0`. Each document must also have equal, non-zero chunk and
 citation counts.
+
+## RAG retrieval (R5)
+
+`app.retrieval.retrieve_evidence()` embeds one normalized question with the
+same `BAAI/bge-m3` model used during ingestion, then runs an exact pgvector
+cosine search. Company, fiscal year, document type, `ready` status, and
+non-null embedding filters are applied in SQL before `LIMIT`.
+
+```python
+from app.retrieval import retrieve_evidence
+
+result = retrieve_evidence(
+    "Doanh thu quý 1 năm 2026 của FPT là bao nhiêu?",
+    "FPT",
+    fiscal_year=2026,
+    document_types=("financial_statement",),
+)
+
+print(result.is_confident)
+for chunk in result.evidence:
+    print(chunk.chunk_id, chunk.document_id, chunk.page_number, chunk.similarity)
+```
+
+The default result contains at most five chunks with cosine similarity at or
+above `0.35`, sorted from highest to lowest. If none passes the threshold,
+`is_confident` is false and `evidence` is empty. Retrieval has no provider
+dependency, so this path cannot call the language model; R6 owns generation.
+
+| Variable | Default |
+|---|---:|
+| `RETRIEVAL_TOP_K` | `5` |
+| `RETRIEVAL_MIN_SIMILARITY` | `0.35` |
+
+Run the filter-isolation and exact-search integration gate against PostgreSQL
+with pgvector:
+
+```bash
+TEST_DATABASE_URL='postgresql://app_user:app_password@localhost:5432/app_db' \
+  python -m unittest tests.test_retrieval -v
+```
+
+The integration test covers company, year, document type, ingestion status,
+top-k ordering, and a 30-query p95 ceiling of 300 ms. R5 deliberately uses an
+exact scan: the seed set has only 930 chunks, so HNSW, hybrid search, and a
+reranker remain out of scope until measurements justify them.
+
+Local acceptance on 2026-08-15 used all 930 OCR-backed chunks with PostgreSQL
+18 and pgvector 0.8.6. An FPT Q1/2026 revenue question returned five FPT 2026
+chunks; the two highest-ranked chunks were both on page 8 with similarities
+`0.7364` and `0.7164`. Across 100 exact SQL searches, p95 was `141.10 ms`.
