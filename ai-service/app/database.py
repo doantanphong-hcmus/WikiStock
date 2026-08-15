@@ -215,7 +215,7 @@ class RetrievalDatabase:
                 f"""
                 SELECT chunk.chunk_id, document.document_id, document.title,
                        chunk.page_number, chunk.location_ref, chunk.content,
-                       1 - (chunk.embedding <=> %s) AS similarity,
+                       1 - (chunk.embedding <=> %s::vector) AS similarity,
                        company.ticker, document.fiscal_year,
                        document_type.type_name
                 FROM document_chunk chunk
