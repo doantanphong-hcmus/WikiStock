@@ -26,6 +26,98 @@ class EmbeddingValidationTests(unittest.TestCase):
 
 @unittest.skipUnless(os.getenv("TEST_DATABASE_URL"), "TEST_DATABASE_URL is not set")
 class PersistenceIntegrationTests(unittest.TestCase):
+    def test_ocr_backfill_batch_is_complete_and_idempotent(self) -> None:
+        database_url = os.environ["TEST_DATABASE_URL"]
+        database = IngestionDatabase(database_url)
+        filenames = {
+            ticker: [f"{uuid.uuid4().hex}_Q{quarter}_{year}.pdf" for quarter, year in periods]
+            for ticker, periods in {
+                "FPT": ((3, 2025), (4, 2025), (1, 2026)),
+                "GAS": ((3, 2025), (4, 2025), (1, 2026)),
+                "HPG": ((3, 2025), (4, 2025), (1, 2026)),
+                "HSG": ((4, 2025), (1, 2026), (2, 2026)),
+            }.items()
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            file_refs = []
+            for ticker, ticker_filenames in filenames.items():
+                ticker_directory = root / ticker
+                ticker_directory.mkdir()
+                for filename in ticker_filenames:
+                    pdf_path = ticker_directory / filename
+                    document = pymupdf.open()
+                    document.new_page().insert_text(
+                        (72, 72), f"{ticker} revenue and profit " * 20
+                    )
+                    document.save(pdf_path)
+                    document.close()
+                    file_refs.append(f"{ticker}/{filename}")
+
+            settings = IngestionSettings(root, database_url=database_url)
+
+            def fake_embedder(texts, _model, _batch):
+                return [[1.0] + [0.0] * 1023 for _ in texts]
+
+            try:
+                first, failed = ingest(settings, database, fake_embedder)
+                self.assertEqual(failed, 0)
+                self.assertEqual(len(first), 12)
+                self.assertEqual({result["status"] for result in first}, {"inserted"})
+
+                with psycopg.connect(database_url) as connection:
+                    counts_before = connection.execute(
+                        """
+                        SELECT count(DISTINCT document.document_id),
+                               count(DISTINCT chunk.chunk_id),
+                               count(DISTINCT citation.citation_id),
+                               count(DISTINCT document.checksum),
+                               min(vector_dims(chunk.embedding)),
+                               max(vector_dims(chunk.embedding))
+                        FROM source_document document
+                        LEFT JOIN document_chunk chunk
+                               ON chunk.document_id = document.document_id
+                        LEFT JOIN citation citation
+                               ON citation.document_id = document.document_id
+                        WHERE document.file_ref = ANY(%s)
+                        """,
+                        (file_refs,),
+                    ).fetchone()
+                self.assertEqual(counts_before, (12, 12, 12, 12, 1024, 1024))
+
+                second, failed = ingest(settings, database, fake_embedder)
+                self.assertEqual(failed, 0)
+                self.assertEqual({result["status"] for result in second}, {"skipped"})
+
+                with psycopg.connect(database_url) as connection:
+                    counts_after = connection.execute(
+                        """
+                        SELECT count(DISTINCT document.document_id),
+                               count(DISTINCT chunk.chunk_id),
+                               count(DISTINCT citation.citation_id)
+                        FROM source_document document
+                        LEFT JOIN document_chunk chunk
+                               ON chunk.document_id = document.document_id
+                        LEFT JOIN citation citation
+                               ON citation.document_id = document.document_id
+                        WHERE document.file_ref = ANY(%s)
+                        """,
+                        (file_refs,),
+                    ).fetchone()
+                self.assertEqual(counts_after, counts_before[:3])
+            finally:
+                with psycopg.connect(database_url) as connection:
+                    connection.execute(
+                        "DELETE FROM citation WHERE document_id IN "
+                        "(SELECT document_id FROM source_document WHERE file_ref = ANY(%s))",
+                        (file_refs,),
+                    )
+                    connection.execute(
+                        "DELETE FROM source_document WHERE file_ref = ANY(%s)",
+                        (file_refs,),
+                    )
+
     def test_idempotency_and_replacement_rollback(self) -> None:
         database_url = os.environ["TEST_DATABASE_URL"]
         database = IngestionDatabase(database_url)

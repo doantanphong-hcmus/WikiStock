@@ -59,8 +59,14 @@ services:
       DB_USER: app_user
       DB_PASSWORD: app_password
       DB_NAME: app_db
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
+      SEED_DATA_PATH: /data/seed_data
+      HF_HOME: /models
       REDIS_HOST: redis
       REDIS_PORT: 6379
+    volumes:
+      - "${RAG_SEED_DATA_PATH:-./docs/Seed_Daa/Báo cáo tài chính}:/data/seed_data:ro"
+      - model_cache:/models
     expose:
       - "8000"
     depends_on:
@@ -111,6 +117,7 @@ services:
 
 volumes:
   postgres_data:
+  model_cache:
 
 networks:
   app_network:

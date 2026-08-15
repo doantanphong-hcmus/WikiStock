@@ -93,14 +93,14 @@ the database integration gate against the Compose database:
 
 ```bash
 docker compose run --rm \
-  -e TEST_DATABASE_URL='postgresql://wikistock:wikistock@postgres:5432/wikistock' \
+  -e TEST_DATABASE_URL='postgresql://app_user:app_password@postgres:5432/app_db' \
   ai-service python -m unittest discover -s tests
 ```
 
 Acceptance query:
 
 ```bash
-docker compose exec -T postgres psql -U wikistock -d wikistock -c "
+docker compose exec -T postgres psql -U app_user -d app_db -c "
 SELECT d.file_ref, d.ingestion_status, d.embedding_model, d.chunk_version,
        count(DISTINCT ch.chunk_id) AS chunks,
        count(DISTINCT ci.citation_id) AS citations
@@ -110,3 +110,70 @@ LEFT JOIN citation ci ON ci.document_id = d.document_id
 GROUP BY d.document_id
 ORDER BY d.file_ref;"
 ```
+
+## OCR backfill (R4B)
+
+R4B reuses the ingestion command above. Point it at the searchable PDFs created
+by the OCR step; do not copy generated PDFs into Git-tracked seed data.
+
+On Windows without Docker, run from `ai-service` after starting a PostgreSQL
+database that has `schema.sql`, `seed.sql`, and pgvector installed:
+
+```powershell
+$env:SEED_DATA_PATH = (Resolve-Path '..\runtime\ocr\output')
+$env:DATABASE_URL = 'postgresql://app_user:app_password@localhost:5432/app_db'
+python -m app.ingestion scan
+```
+
+With Docker Compose, run from the repository root:
+
+```powershell
+$env:RAG_SEED_DATA_PATH = './runtime/ocr/output'
+docker compose run --rm ai-service python -m app.ingestion scan
+Remove-Item Env:RAG_SEED_DATA_PATH
+```
+
+A complete first run discovers 12 PDFs and reports only `inserted` or
+`skipped` documents. A second run must report 12 `skipped` documents and leave
+database counts unchanged. The command exits non-zero if any PDF still needs
+OCR or fails ingestion.
+
+Verify the persisted batch:
+
+```sql
+SELECT d.file_ref, d.ingestion_status, d.fiscal_year, d.fiscal_quarter,
+       d.embedding_model, d.chunk_version,
+       count(DISTINCT ch.chunk_id) AS chunks,
+       count(DISTINCT ci.citation_id) AS citations
+FROM source_document d
+JOIN data_source s ON s.source_id = d.source_id
+LEFT JOIN document_chunk ch ON ch.document_id = d.document_id
+LEFT JOIN citation ci ON ci.document_id = d.document_id
+WHERE s.source_name = 'WikiStock seed PDF'
+GROUP BY d.document_id
+ORDER BY d.file_ref;
+
+SELECT count(DISTINCT d.document_id) AS documents,
+       count(DISTINCT d.document_id) FILTER (
+           WHERE d.ingestion_status = 'ready'
+       ) AS ready,
+       count(DISTINCT d.document_id) - count(DISTINCT d.checksum)
+           AS duplicate_checksums,
+       count(*) FILTER (
+           WHERE ch.embedding IS NULL OR vector_dims(ch.embedding) <> 1024
+       ) AS invalid_embeddings
+FROM source_document d
+JOIN data_source s ON s.source_id = d.source_id
+LEFT JOIN document_chunk ch ON ch.document_id = d.document_id
+WHERE s.source_name = 'WikiStock seed PDF';
+
+SELECT count(*) AS orphan_citations
+FROM citation ci
+LEFT JOIN document_chunk ch ON ch.chunk_id = ci.chunk_id
+WHERE ch.chunk_id IS NULL;
+```
+
+The expected invariant values are `documents = 12`, `ready = 12`,
+`duplicate_checksums = 0`, `invalid_embeddings = 0`, and
+`orphan_citations = 0`. Each document must also have equal, non-zero chunk and
+citation counts.
