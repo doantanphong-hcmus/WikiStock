@@ -420,7 +420,9 @@ def ingest(
             results.append(_failed_result(display_path, code, message))
 
     results.sort(key=lambda result: str(result["path"]).casefold())
-    failed = sum(result["status"] == "failed" for result in results)
+    failed = sum(
+        result["status"] in {"failed", "needs_ocr"} for result in results
+    )
     return results, failed
 
 

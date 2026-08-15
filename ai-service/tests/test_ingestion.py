@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pymupdf
 
@@ -13,6 +14,7 @@ from app.ingestion import (
     chunk_pages,
     discover_pdf_paths,
     extract_pdf_pages,
+    ingest,
     parse_document_metadata,
     pdf_needs_ocr,
     sha256_file,
@@ -136,6 +138,29 @@ class SettingsTests(unittest.TestCase):
     def test_overlap_must_be_smaller_than_chunk_size(self) -> None:
         with self.assertRaises(ValueError):
             IngestionSettings(Path("seed"), chunk_size_chars=100, chunk_overlap_chars=100)
+
+
+class IngestionOutcomeTests(unittest.TestCase):
+    def test_needs_ocr_makes_the_batch_fail(self) -> None:
+        class DatabaseStub:
+            @staticmethod
+            def document_state(_checksum):
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ticker_directory = root / "FPT"
+            ticker_directory.mkdir()
+            (ticker_directory / "report_Q1_2026.pdf").write_bytes(b"pdf")
+            image_page = PageText(1, (), "", True)
+
+            with patch("app.ingestion.extract_pdf_pages", return_value=[image_page]):
+                results, failed = ingest(
+                    IngestionSettings(root), database=DatabaseStub()
+                )
+
+        self.assertEqual(results[0]["status"], "needs_ocr")
+        self.assertEqual(failed, 1)
 
 
 if __name__ == "__main__":
