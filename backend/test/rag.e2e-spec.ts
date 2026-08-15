@@ -4,7 +4,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
+import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { AiAskResponse, ApiResponse } from '../src/common/types/api.types';
 import { PrismaService } from '../src/database/prisma.service';
 
 const describeWithDatabase = process.env.TEST_DATABASE_URL
@@ -12,7 +14,7 @@ const describeWithDatabase = process.env.TEST_DATABASE_URL
   : describe.skip;
 
 describeWithDatabase('R7 citations (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
   let prisma: PrismaService;
   let seedRoot: string;
   let documentId: number;
@@ -147,8 +149,9 @@ describeWithDatabase('R7 citations (e2e)', () => {
       .post('/api/v1/ai/ask')
       .send({ query: 'Question', companyCode: 'R7TEST' })
       .expect(200);
+    const answerBody = answer.body as unknown as ApiResponse<AiAskResponse>;
 
-    expect(answer.body.data.citations).toEqual([
+    expect(answerBody.data?.citations).toEqual([
       {
         citationId,
         documentId,
@@ -158,9 +161,13 @@ describeWithDatabase('R7 citations (e2e)', () => {
         excerpt: 'Canonical database evidence.',
       },
     ]);
+    const sourceUrl = answerBody.data?.citations[0]?.sourceUrl;
+    if (!sourceUrl) {
+      throw new Error('AI answer did not include a citation source URL');
+    }
 
     await request(app.getHttpServer())
-      .get(answer.body.data.citations[0].sourceUrl)
+      .get(sourceUrl)
       .expect('Content-Type', /application\/pdf/)
       .expect('Content-Disposition', /inline/)
       .expect(200);
