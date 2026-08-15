@@ -2,6 +2,7 @@
 
 import { BadGatewayException, GatewayTimeoutException } from '@nestjs/common';
 import { mockCitations } from '../common/mock-data/companies';
+import { PrismaService } from '../database/prisma.service';
 import { AiService } from './ai.service';
 
 function mockAiResponse(data: Record<string, unknown>) {
@@ -18,11 +19,14 @@ function mockAiResponse(data: Record<string, unknown>) {
 }
 
 describe('AiService', () => {
-  const service = new AiService();
+  const findMany = jest.fn();
+  const prisma = { documentChunk: { findMany } };
+  const service = new AiService(prisma as unknown as PrismaService);
   const originalDemoMode = process.env.AI_DEMO_MODE;
 
   beforeEach(() => {
     delete process.env.AI_DEMO_MODE;
+    findMany.mockReset();
   });
 
   afterEach(() => {
@@ -39,15 +43,35 @@ describe('AiService', () => {
 
   it('maps internal evidence to the public citation contract', async () => {
     const knownCitation = mockCitations.FPT[0];
+    findMany.mockResolvedValue([
+      {
+        chunkId: 123,
+        documentId: knownCitation.documentId,
+        content: 'Canonical database excerpt.',
+        locationRef: 'Trang 24',
+        citation: {
+          citationId: knownCitation.citationId,
+          documentId: knownCitation.documentId,
+          excerpt: 'Canonical database excerpt.',
+          locationRef: 'Trang 24',
+        },
+        document: {
+          title: 'Canonical database title',
+          url: null,
+          fileRef: 'FPT/report.pdf',
+          ingestionStatus: 'ready',
+          company: { ticker: 'FPT' },
+        },
+      },
+    ]);
     mockAiResponse({
       answer: 'FPT maintained revenue growth.',
       isConfident: true,
       limitations: null,
       evidence: [
         {
+          chunkId: 123,
           documentId: knownCitation.documentId,
-          locationRef: knownCitation.locationRef,
-          excerpt: knownCitation.excerpt,
         },
       ],
     });
@@ -57,19 +81,29 @@ describe('AiService', () => {
       query: 'How did revenue change?',
     });
 
-    expect(result.data?.citations).toEqual([knownCitation]);
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(result.data?.citations).toEqual([
+      {
+        citationId: knownCitation.citationId,
+        documentId: knownCitation.documentId,
+        docTitle: 'Canonical database title',
+        sourceUrl: `/api/v1/documents/${knownCitation.documentId}/file`,
+        locationRef: 'Trang 24',
+        excerpt: 'Canonical database excerpt.',
+      },
+    ]);
   });
 
   it('rejects evidence that does not match a known source', async () => {
+    findMany.mockResolvedValue([]);
     mockAiResponse({
       answer: 'Unsupported answer.',
       isConfident: true,
       limitations: null,
       evidence: [
         {
+          chunkId: 999,
           documentId: 999,
-          locationRef: 'Page 1',
-          excerpt: 'Unknown source.',
         },
       ],
     });
@@ -91,6 +125,81 @@ describe('AiService', () => {
         code: 'AI_INVALID_EVIDENCE',
       },
     });
+  });
+
+  it('rejects a chunk whose document id does not match the AI evidence', async () => {
+    findMany.mockResolvedValue([
+      {
+        chunkId: 123,
+        documentId: 8,
+        content: 'Canonical excerpt.',
+        locationRef: 'Trang 1',
+        citation: {
+          citationId: 1,
+          documentId: 8,
+          excerpt: 'Canonical excerpt.',
+          locationRef: 'Trang 1',
+        },
+        document: {
+          title: 'FPT report',
+          url: null,
+          fileRef: 'FPT/report.pdf',
+          ingestionStatus: 'ready',
+          company: { ticker: 'FPT' },
+        },
+      },
+    ]);
+    mockAiResponse({
+      answer: 'Mismatched answer.',
+      isConfident: true,
+      limitations: null,
+      evidence: [{ chunkId: 123, documentId: 9 }],
+    });
+
+    await expect(
+      service.ask({ companyCode: 'FPT', query: 'Question' }),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+  });
+
+  it('preserves AI evidence order while querying unique chunks once', async () => {
+    const makeChunk = (chunkId: number, citationId: number) => ({
+      chunkId,
+      documentId: 8,
+      content: `Excerpt ${chunkId}`,
+      locationRef: `Trang ${chunkId}`,
+      citation: {
+        citationId,
+        documentId: 8,
+        excerpt: `Excerpt ${chunkId}`,
+        locationRef: `Trang ${chunkId}`,
+      },
+      document: {
+        title: 'FPT report',
+        url: 'https://example.com/report.pdf',
+        fileRef: null,
+        ingestionStatus: 'ready',
+        company: { ticker: 'FPT' },
+      },
+    });
+    findMany.mockResolvedValue([makeChunk(2, 20), makeChunk(1, 10)]);
+    mockAiResponse({
+      answer: 'Ordered answer.',
+      isConfident: true,
+      limitations: null,
+      evidence: [
+        { chunkId: 1, documentId: 8 },
+        { chunkId: 2, documentId: 8 },
+        { chunkId: 1, documentId: 8 },
+      ],
+    });
+
+    const result = await service.ask({ companyCode: 'FPT', query: 'Question' });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany.mock.calls[0][0].where.chunkId.in).toEqual([1, 2]);
+    expect(result.data?.citations.map((item) => item.citationId)).toEqual([
+      10, 20, 10,
+    ]);
   });
 
   it('rejects a confident answer without evidence', async () => {
