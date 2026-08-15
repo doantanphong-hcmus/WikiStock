@@ -5,7 +5,7 @@ from typing import Sequence
 import psycopg
 from pgvector.psycopg import register_vector
 
-from app.models import DocumentChunk, DocumentMetadata, IngestionError
+from app.models import DocumentChunk, DocumentMetadata, IngestionError, RetrievedChunk
 
 
 SOURCE_NAME = "WikiStock seed PDF"
@@ -162,3 +162,72 @@ class IngestionDatabase:
                 """,
                 (error_message[:500], document_id),
             )
+
+
+class RetrievalDatabase:
+    def __init__(self, database_url: str) -> None:
+        self.database_url = database_url
+
+    def filter_state(
+        self, company_code: str, document_types: Sequence[str]
+    ) -> tuple[bool, frozenset[str]]:
+        with psycopg.connect(self.database_url) as connection:
+            company_exists = connection.execute(
+                "SELECT EXISTS (SELECT 1 FROM company WHERE ticker = %s)",
+                (company_code,),
+            ).fetchone()[0]
+            known_types = frozenset()
+            if document_types:
+                known_types = frozenset(
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT type_name FROM document_type WHERE type_name = ANY(%s)",
+                        (list(document_types),),
+                    )
+                )
+        return company_exists, known_types
+
+    def retrieve_chunks(
+        self,
+        query_embedding: Sequence[float],
+        company_code: str,
+        fiscal_year: int | None,
+        document_types: Sequence[str],
+        top_k: int,
+    ) -> list[RetrievedChunk]:
+        conditions = [
+            "company.ticker = %s",
+            "document.ingestion_status = 'ready'",
+            "chunk.embedding IS NOT NULL",
+        ]
+        parameters: list[object] = [list(query_embedding), company_code]
+        if fiscal_year is not None:
+            conditions.append("document.fiscal_year = %s")
+            parameters.append(fiscal_year)
+        if document_types:
+            conditions.append("document_type.type_name = ANY(%s)")
+            parameters.append(list(document_types))
+        parameters.append(top_k)
+
+        with psycopg.connect(self.database_url) as connection:
+            register_vector(connection)
+            rows = connection.execute(
+                f"""
+                SELECT chunk.chunk_id, document.document_id, document.title,
+                       chunk.page_number, chunk.location_ref, chunk.content,
+                       1 - (chunk.embedding <=> %s::vector) AS similarity,
+                       company.ticker, document.fiscal_year,
+                       document_type.type_name
+                FROM document_chunk chunk
+                JOIN source_document document
+                  ON document.document_id = chunk.document_id
+                JOIN company ON company.company_id = document.company_id
+                JOIN document_type
+                  ON document_type.doc_type_id = document.doc_type_id
+                WHERE {' AND '.join(conditions)}
+                ORDER BY similarity DESC, chunk.chunk_id
+                LIMIT %s
+                """,
+                parameters,
+            ).fetchall()
+        return [RetrievedChunk(*row) for row in rows]

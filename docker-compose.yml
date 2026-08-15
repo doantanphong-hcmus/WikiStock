@@ -62,6 +62,8 @@ services:
       DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
       SEED_DATA_PATH: /data/seed_data
       HF_HOME: /models
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-5}
+      RETRIEVAL_MIN_SIMILARITY: ${RETRIEVAL_MIN_SIMILARITY:-0.35}
       REDIS_HOST: redis
       REDIS_PORT: 6379
     volumes:

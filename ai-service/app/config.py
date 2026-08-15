@@ -16,6 +16,16 @@ def _positive_int(name: str, default: int) -> int:
     return value
 
 
+def _similarity(name: str, default: float) -> float:
+    try:
+        value = float(os.getenv(name, str(default)))
+    except ValueError as error:
+        raise ValueError(f"{name} must be a number") from error
+    if not -1 <= value <= 1:
+        raise ValueError(f"{name} must be between -1 and 1")
+    return value
+
+
 @dataclass(frozen=True)
 class IngestionSettings:
     seed_data_path: Path
@@ -60,4 +70,37 @@ class IngestionSettings:
             embedding_model=os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3"),
             embedding_dimensions=_positive_int("EMBEDDING_DIMENSIONS", 1024),
             embedding_batch_size=_positive_int("EMBEDDING_BATCH_SIZE", 8),
+        )
+
+
+@dataclass(frozen=True)
+class RetrievalSettings:
+    database_url: str = ""
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_dimensions: int = 1024
+    embedding_batch_size: int = 8
+    top_k: int = 5
+    min_similarity: float = 0.35
+
+    def __post_init__(self) -> None:
+        if not self.embedding_model.strip():
+            raise ValueError("EMBEDDING_MODEL must not be empty")
+        if self.embedding_dimensions <= 0:
+            raise ValueError("EMBEDDING_DIMENSIONS must be greater than zero")
+        if self.embedding_batch_size <= 0:
+            raise ValueError("EMBEDDING_BATCH_SIZE must be greater than zero")
+        if self.top_k <= 0:
+            raise ValueError("RETRIEVAL_TOP_K must be greater than zero")
+        if not -1 <= self.min_similarity <= 1:
+            raise ValueError("RETRIEVAL_MIN_SIMILARITY must be between -1 and 1")
+
+    @classmethod
+    def from_env(cls) -> "RetrievalSettings":
+        return cls(
+            database_url=os.getenv("DATABASE_URL", ""),
+            embedding_model=os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3"),
+            embedding_dimensions=_positive_int("EMBEDDING_DIMENSIONS", 1024),
+            embedding_batch_size=_positive_int("EMBEDDING_BATCH_SIZE", 8),
+            top_k=_positive_int("RETRIEVAL_TOP_K", 5),
+            min_similarity=_similarity("RETRIEVAL_MIN_SIMILARITY", 0.35),
         )
