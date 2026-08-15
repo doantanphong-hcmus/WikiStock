@@ -15,6 +15,12 @@ class RetrievalError(Exception):
         self.code = code
 
 
+class AiGenerationError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class Issue:
     code: str
