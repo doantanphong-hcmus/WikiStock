@@ -9,6 +9,12 @@ class IngestionError(Exception):
         self.code = code
 
 
+class RetrievalError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class Issue:
     code: str
@@ -39,3 +45,24 @@ class DocumentChunk:
     content: str
     char_count: int
     content_hash: str
+
+
+@dataclass(frozen=True)
+class RetrievedChunk:
+    chunk_id: int
+    document_id: int
+    title: str
+    page_number: int
+    location_ref: str
+    content: str
+    similarity: float
+    company_code: str
+    fiscal_year: int | None
+    document_type: str
+
+
+@dataclass(frozen=True)
+class RetrievalResult:
+    is_confident: bool
+    evidence: tuple[RetrievedChunk, ...]
+    duration_ms: float
