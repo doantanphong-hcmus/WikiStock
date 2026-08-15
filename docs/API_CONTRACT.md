@@ -199,6 +199,23 @@ Fallback mock chỉ được phép khi Backend chạy với `AI_DEMO_MODE=true`.
 
 **Endpoint:** `GET /api/v1/companies/:companyCode/financials`
 
+Query parameters:
+
+| Tham số | Bắt buộc | Quy tắc |
+|---|---|---|
+| `year` | Không | Năm tài chính dạng số nguyên |
+| `quarter` | Không | Quý từ `1` đến `4`; chỉ hợp lệ khi có `year` |
+
+Hành vi đã chốt cho V1:
+
+- Không truyền `year` và `quarter`: trả báo cáo mới nhất của doanh nghiệp.
+- Chỉ truyền `year`: trả báo cáo mới nhất trong năm đó.
+- Truyền đủ `year` và `quarter`: trả đúng báo cáo quý được yêu cầu.
+- Truyền `quarter` thiếu `year` hoặc giá trị không hợp lệ: trả HTTP `400` với mã lỗi `INVALID_FINANCIAL_PERIOD`.
+- Doanh nghiệp hoặc kỳ báo cáo không có dữ liệu: trả HTTP `404` theo error contract chung.
+
+B0 chốt quy ước này để Frontend và Backend dùng chung. Việc truy vấn PostgreSQL và áp dụng bộ lọc được triển khai ở B4; service dữ liệu giả hiện tại chưa được coi là implementation hoàn chỉnh.
+
 **Response Payload:**
 
 ```json
