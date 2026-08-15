@@ -60,7 +60,14 @@ class RagPipelineTests(unittest.TestCase):
         self.assertEqual(answer.evidence[0].document_id, 8)
 
     def test_rejects_malformed_json_and_missing_fields(self) -> None:
-        for response in ("not json", '{"answer":"Có"}'):
+        for response in (
+            "not json",
+            '{"answer":"Có"}',
+            '{"answer":"Có","isConfident":"true",'
+            '"usedChunkIds":[123],"limitations":null}',
+            '{"answer":"Có","isConfident":true,'
+            '"usedChunkIds":["123"],"limitations":null}',
+        ):
             with self.subTest(response=response):
                 with self.assertRaises(AiGenerationError) as caught:
                     self.run_with(response)

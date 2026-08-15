@@ -123,15 +123,15 @@ class RetrievalSettings:
 @dataclass(frozen=True)
 class AiSettings:
     provider: str = "demo"
-    base_url: str = "https://claude.zunef.com/v1/ai"
+    base_url: str = "https://claude-api.zunef.com/v1/ai"
     api_key: str = ""
     model: str = "claude-sonnet-4-6"
     connect_timeout_seconds: float = 5
     read_timeout_seconds: float = 45
 
     def __post_init__(self) -> None:
-        if self.provider not in {"demo", "claude_proxy"}:
-            raise ValueError("AI_PROVIDER must be demo or claude_proxy")
+        if self.provider not in {"demo", "gateway", "claude_proxy"}:
+            raise ValueError("AI_PROVIDER must be demo or gateway")
         if not self.base_url.strip():
             raise ValueError("AI_API_BASE_URL must not be empty")
         if not self.model.strip():
@@ -148,7 +148,7 @@ class AiSettings:
             base_url=_ai_env(
                 "AI_API_BASE_URL",
                 "CLAUDE_API_BASE_URL",
-                "https://claude.zunef.com/v1/ai",
+                "https://claude-api.zunef.com/v1/ai",
             ),
             api_key=_ai_env("AI_API_KEY", "CLAUDE_API_KEY", ""),
             model=_ai_env("AI_MODEL", "CLAUDE_MODEL", "claude-sonnet-4-6"),
