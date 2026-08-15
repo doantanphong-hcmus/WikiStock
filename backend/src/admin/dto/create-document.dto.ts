@@ -31,8 +31,9 @@ export class CreateDocumentDto {
   @IsDateString()
   publishedDate?: string;
 
+  @IsOptional()
   @IsUrl({ require_protocol: true })
-  url!: string;
+  url?: string;
 
   @IsOptional()
   @IsString()

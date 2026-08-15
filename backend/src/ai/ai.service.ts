@@ -10,6 +10,7 @@ import {
   Citation,
 } from '../common/types/api.types';
 import { mockCitations, mockDocuments } from '../common/mock-data/companies';
+import { PrismaService } from '../database/prisma.service';
 
 type JsonObject = Record<string, unknown>;
 
@@ -55,16 +56,21 @@ function serviceUnavailable(details: string) {
   });
 }
 
-function serviceTimeout() {
+function serviceTimeout(timeoutMs: number) {
   return new GatewayTimeoutException({
     statusCode: 504,
     message: 'AI service timed out',
     data: null,
     error: {
       code: 'AI_SERVICE_TIMEOUT',
-      details: 'AI service did not respond within 3000ms',
+      details: `AI service did not respond within ${timeoutMs}ms`,
     },
   });
+}
+
+function aiServiceTimeoutMs(): number {
+  const configured = Number(process.env.AI_SERVICE_TIMEOUT_MS ?? 60_000);
+  return Number.isInteger(configured) && configured > 0 ? configured : 60_000;
 }
 
 function isTimeoutError(error: unknown) {
@@ -76,57 +82,104 @@ function isTimeoutError(error: unknown) {
 
 @Injectable()
 export class AiService {
-  private mapEvidence(companyCode: string, value: unknown): Citation[] {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private async mapEvidence(
+    companyCode: string,
+    value: unknown,
+  ): Promise<Citation[]> {
     if (!Array.isArray(value)) {
       throw invalidEvidence('The evidence field must be an array');
     }
 
-    const documents = mockDocuments[companyCode] ?? [];
-    const citations = mockCitations[companyCode] ?? [];
-
-    // ponytail: mock lookup only; replace with one Prisma create-or-get query when persistence is wired.
-    return value.map((rawEvidence, index) => {
+    const evidence = value.map((rawEvidence, index) => {
       const evidence = asObject(rawEvidence);
+      const chunkId = evidence?.chunkId;
       const documentId = evidence?.documentId;
-      const locationRef = evidence?.locationRef;
-      const excerpt = evidence?.excerpt;
 
       if (
+        !Number.isInteger(chunkId) ||
+        Number(chunkId) <= 0 ||
         !Number.isInteger(documentId) ||
-        Number(documentId) <= 0 ||
-        (locationRef !== null && typeof locationRef !== 'string') ||
-        typeof excerpt !== 'string' ||
-        !excerpt.trim()
+        Number(documentId) <= 0
       ) {
         throw invalidEvidence(`Evidence at index ${index} has invalid fields`);
       }
 
-      const document = documents.find((item) => item.documentId === documentId);
-      const citation = citations.find(
-        (item) =>
-          item.documentId === documentId &&
-          item.locationRef === locationRef &&
-          item.excerpt === excerpt,
-      );
+      return { chunkId: Number(chunkId), documentId: Number(documentId) };
+    });
 
-      if (!document || !citation) {
+    const chunkIds = [...new Set(evidence.map((item) => item.chunkId))];
+    if (chunkIds.length === 0) {
+      return [];
+    }
+
+    const chunks = await this.prisma.documentChunk.findMany({
+      where: { chunkId: { in: chunkIds } },
+      select: {
+        chunkId: true,
+        documentId: true,
+        content: true,
+        locationRef: true,
+        citation: {
+          select: {
+            citationId: true,
+            documentId: true,
+            excerpt: true,
+            locationRef: true,
+          },
+        },
+        document: {
+          select: {
+            title: true,
+            url: true,
+            fileRef: true,
+            ingestionStatus: true,
+            company: { select: { ticker: true } },
+          },
+        },
+      },
+    });
+    if (chunks.length !== chunkIds.length) {
+      throw invalidEvidence('Evidence references an unknown chunk');
+    }
+
+    const chunksById = new Map(chunks.map((chunk) => [chunk.chunkId, chunk]));
+    return evidence.map(({ chunkId, documentId }, index) => {
+      const chunk = chunksById.get(chunkId);
+      if (
+        !chunk ||
+        chunk.documentId !== documentId ||
+        chunk.document.ingestionStatus !== 'ready' ||
+        chunk.document.company?.ticker !== companyCode
+      ) {
         throw invalidEvidence(
-          `Evidence at index ${index} does not match a known source`,
+          `Evidence at index ${index} does not match a ready company document`,
         );
       }
-      if (!document.url) {
+
+      const citation = chunk.citation;
+      if (!citation || citation.documentId !== documentId) {
         throw invalidEvidence(
-          `Evidence at index ${index} has no public source URL`,
+          `Evidence at index ${index} has no canonical citation`,
+        );
+      }
+      const sourceUrl = chunk.document.fileRef?.trim()
+        ? `/api/v1/documents/${documentId}/file`
+        : chunk.document.url?.trim();
+      if (!sourceUrl) {
+        throw invalidEvidence(
+          `Evidence at index ${index} has no registered source`,
         );
       }
 
       return {
         citationId: citation.citationId,
-        documentId: document.documentId,
-        docTitle: document.title,
-        sourceUrl: document.url,
-        locationRef,
-        excerpt,
+        documentId,
+        docTitle: chunk.document.title,
+        sourceUrl,
+        locationRef: citation.locationRef ?? chunk.locationRef,
+        excerpt: citation.excerpt ?? chunk.content,
       };
     });
   }
@@ -149,6 +202,7 @@ export class AiService {
   async ask(payload: AiAskRequest): Promise<ApiResponse<AiAskResponse>> {
     const baseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8000';
     const demoMode = process.env.AI_DEMO_MODE === 'true';
+    const timeoutMs = aiServiceTimeoutMs();
     const companyCode = (
       payload.companyCode ??
       payload.ticker ??
@@ -167,7 +221,7 @@ export class AiService {
           filters: payload.filters,
           conversationId: payload.conversationId,
         }),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
       if (demoMode) {
@@ -175,7 +229,7 @@ export class AiService {
       }
 
       if (isTimeoutError(error)) {
-        throw serviceTimeout();
+        throw serviceTimeout(timeoutMs);
       }
 
       throw serviceUnavailable('Could not connect to AI service');
@@ -210,7 +264,7 @@ export class AiService {
       throw invalidResponse('Answer and confidence fields are required');
     }
 
-    const citations = this.mapEvidence(companyCode, data.evidence);
+    const citations = await this.mapEvidence(companyCode, data.evidence);
     const isConfident = data.isConfident;
 
     if (isConfident && citations.length === 0) {

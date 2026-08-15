@@ -79,9 +79,8 @@ Quy định:
     "limitations": null,
     "evidence": [
       {
-        "documentId": 1,
-        "locationRef": "Trang 24",
-        "excerpt": "Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ."
+        "chunkId": 123,
+        "documentId": 1
       }
     ]
   },
@@ -89,9 +88,10 @@ Quy định:
 }
 ```
 
-`evidence` là kết quả retrieval nội bộ. AI Service không tự tạo `citationId`,
-`docTitle` hoặc `sourceUrl`; Backend xác thực `documentId` và chuẩn hóa evidence
-thành public citation.
+`evidence` là identity của kết quả retrieval nội bộ. AI Service chỉ được trả
+`chunkId` và `documentId`; không tự tạo `citationId`, `docTitle`, `sourceUrl`,
+`locationRef` hoặc `excerpt`. Backend gom các `chunkId`, truy vấn database một
+lần, xác thực quan hệ chunk-document và dựng public citation từ dữ liệu gốc.
 
 Khi thiếu dữ liệu, AI phải trả lời không đủ dữ liệu, đặt `isConfident` là
 `false` và để `evidence` là mảng rỗng. Một câu trả lời có `isConfident=true`
@@ -272,7 +272,22 @@ Fallback mock chỉ được phép khi Backend chạy với `AI_DEMO_MODE=true`.
 `url` có thể là `null` đối với tài liệu local; khi đó `fileRef` là tham chiếu
 nguồn nội bộ và Backend sẽ chịu trách nhiệm tạo URL tải file công khai.
 
-### 3.5. Citation Theo Doanh Nghiệp
+### 3.5. Đọc File Tài Liệu Đã Đăng Ký
+
+**Endpoint:** `GET /api/v1/documents/:documentId/file`
+
+Endpoint chỉ phục vụ tài liệu có trạng thái `ready`, có `fileRef`, là file PDF
+đã đăng ký và nằm bên trong `SEED_DATA_PATH`. Path traversal, symlink trỏ ra
+ngoài seed root, tài liệu chưa sẵn sàng hoặc file không tồn tại đều trả `404`.
+
+Response sử dụng:
+
+```http
+Content-Type: application/pdf
+Content-Disposition: inline
+```
+
+### 3.6. Citation Theo Doanh Nghiệp
 
 **Endpoint:** `GET /api/v1/companies/:companyCode/citations`
 
@@ -296,7 +311,7 @@ nguồn nội bộ và Backend sẽ chịu trách nhiệm tạo URL tải file c
 }
 ```
 
-### 3.6. Admin Data Status
+### 3.7. Admin Data Status
 
 **Endpoint:** `GET /api/v1/admin/companies`
 
@@ -430,7 +445,7 @@ Response dùng public citation contract sau khi Backend đã xác thực và chu
         "citationId": 1,
         "documentId": 1,
         "docTitle": "Báo cáo tài chính kiểm toán hợp nhất 2025",
-        "sourceUrl": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
+        "sourceUrl": "/api/v1/documents/1/file",
         "locationRef": "Trang 24",
         "excerpt": "Doanh thu và lợi nhuận sau thuế tiếp tục tăng nhờ mảng dịch vụ công nghệ."
       }
