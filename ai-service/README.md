@@ -1,16 +1,16 @@
 # WikiStock AI Service
 
-## Claude provider contract
+## AI gateway contract
 
-R2 targets the Zunef Claude proxy. The API key must only exist in a local
+The current gateway is Anthropic Messages-compatible. The API key must only exist in a local
 `.env` file or a secret store; never put it in a command, fixture, log, or Git.
 
 | Item | Contract |
 |---|---|
-| Base URL | `https://claude.zunef.com/v1/ai` |
+| Base URL | `https://claude-api.zunef.com/v1/ai` |
 | List models | `GET /models` |
 | Create message | `POST /messages` |
-| Authentication | `x-api-key: $CLAUDE_API_KEY` |
+| Authentication | `x-api-key: $AI_API_KEY` |
 | Request style | Anthropic Messages-compatible; live success verified |
 | API version header | `anthropic-version: 2023-06-01`; accepted by Zunef |
 | Verified model | `claude-sonnet-4-6` |
@@ -31,26 +31,26 @@ Run this in Codespaces. The silent prompt prevents the key from entering shell
 history. Use the exact model ID returned by `/models`.
 
 ```bash
-export CLAUDE_API_BASE_URL='https://claude.zunef.com/v1/ai'
-read -rsp 'Claude API key: ' CLAUDE_API_KEY && echo
+export AI_API_BASE_URL='https://claude-api.zunef.com/v1/ai'
+read -rsp 'AI API key: ' AI_API_KEY && echo
 
 curl --silent --show-error --fail-with-body \
   --connect-timeout 5 --max-time 45 \
-  -H "x-api-key: $CLAUDE_API_KEY" \
-  "$CLAUDE_API_BASE_URL/models"
+  -H "x-api-key: $AI_API_KEY" \
+  "$AI_API_BASE_URL/models"
 
-export CLAUDE_MODEL='claude-sonnet-4-6'
-CLAUDE_REQUEST_BODY=$(printf '%s' \
-  "{\"model\":\"$CLAUDE_MODEL\",\"max_tokens\":32,\"temperature\":0,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with only: pong\"}]}")
+export AI_MODEL='claude-sonnet-4-6'
+AI_REQUEST_BODY=$(printf '%s' \
+  "{\"model\":\"$AI_MODEL\",\"max_tokens\":32,\"temperature\":0,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with only: pong\"}]}")
 curl --silent --show-error --fail-with-body \
   --connect-timeout 5 --max-time 45 \
   -H 'content-type: application/json' \
   -H 'anthropic-version: 2023-06-01' \
-  -H "x-api-key: $CLAUDE_API_KEY" \
-  "$CLAUDE_API_BASE_URL/messages" \
-  --data "$CLAUDE_REQUEST_BODY"
+  -H "x-api-key: $AI_API_KEY" \
+  "$AI_API_BASE_URL/messages" \
+  --data "$AI_REQUEST_BODY"
 
-unset CLAUDE_API_KEY CLAUDE_REQUEST_BODY
+unset AI_API_KEY AI_REQUEST_BODY
 ```
 
 Before committing a captured response, remove dynamic IDs and inspect it for
@@ -204,6 +204,38 @@ The default result contains at most five chunks with cosine similarity at or
 above `0.35`, sorted from highest to lowest. If none passes the threshold,
 `is_confident` is false and `evidence` is empty. Retrieval has no provider
 dependency, so this path cannot call the language model; R6 owns generation.
+
+## R6 grounded answer generation
+
+Set `AI_PROVIDER=gateway` to enable retrieval followed by AI generation. The
+default `AI_PROVIDER=demo` is deliberately non-confident and never calls the
+database or gateway. A gateway failure is returned as a stable error; it is
+never hidden by a demo fallback.
+
+The model receives canonical chunk headers and untrusted source text. Its JSON
+output is strictly validated, including the rule that every selected chunk ID
+must belong to the retrieved context. The internal endpoint returns only
+`chunkId` and `documentId`; R7 will resolve public citation metadata from the
+database.
+
+Run the normal suite without a provider key:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Live smoke tests are isolated behind an explicit marker and read the key only
+from the process environment:
+
+```bash
+export RUN_LIVE_AI_TESTS=1
+read -rsp 'AI API key: ' AI_API_KEY && echo
+python -m unittest tests.test_live_ai -v
+unset RUN_LIVE_AI_TESTS AI_API_KEY
+```
+
+Legacy `CLAUDE_*` environment names remain accepted for existing local setups,
+but new configuration should use the provider-neutral `AI_*` names above.
 
 | Variable | Default |
 |---|---:|

@@ -26,6 +26,20 @@ def _similarity(name: str, default: float) -> float:
     return value
 
 
+def _positive_float(name: str, default: float) -> float:
+    try:
+        value = float(os.getenv(name, str(default)))
+    except ValueError as error:
+        raise ValueError(f"{name} must be a number") from error
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than zero")
+    return value
+
+
+def _ai_env(name: str, legacy_name: str, default: str) -> str:
+    return os.getenv(name, os.getenv(legacy_name, default))
+
+
 @dataclass(frozen=True)
 class IngestionSettings:
     seed_data_path: Path
@@ -103,4 +117,47 @@ class RetrievalSettings:
             embedding_batch_size=_positive_int("EMBEDDING_BATCH_SIZE", 8),
             top_k=_positive_int("RETRIEVAL_TOP_K", 5),
             min_similarity=_similarity("RETRIEVAL_MIN_SIMILARITY", 0.35),
+        )
+
+
+@dataclass(frozen=True)
+class AiSettings:
+    provider: str = "demo"
+    base_url: str = "https://claude-api.zunef.com/v1/ai"
+    api_key: str = ""
+    model: str = "claude-sonnet-4-6"
+    connect_timeout_seconds: float = 5
+    read_timeout_seconds: float = 45
+
+    def __post_init__(self) -> None:
+        if self.provider not in {"demo", "gateway", "claude_proxy"}:
+            raise ValueError("AI_PROVIDER must be demo or gateway")
+        if not self.base_url.strip():
+            raise ValueError("AI_API_BASE_URL must not be empty")
+        if not self.model.strip():
+            raise ValueError("AI_MODEL must not be empty")
+        if self.connect_timeout_seconds <= 0:
+            raise ValueError("AI_CONNECT_TIMEOUT_SECONDS must be greater than zero")
+        if self.read_timeout_seconds <= 0:
+            raise ValueError("AI_READ_TIMEOUT_SECONDS must be greater than zero")
+
+    @classmethod
+    def from_env(cls) -> "AiSettings":
+        return cls(
+            provider=os.getenv("AI_PROVIDER", "demo").strip().lower(),
+            base_url=_ai_env(
+                "AI_API_BASE_URL",
+                "CLAUDE_API_BASE_URL",
+                "https://claude-api.zunef.com/v1/ai",
+            ),
+            api_key=_ai_env("AI_API_KEY", "CLAUDE_API_KEY", ""),
+            model=_ai_env("AI_MODEL", "CLAUDE_MODEL", "claude-sonnet-4-6"),
+            connect_timeout_seconds=_positive_float(
+                "AI_CONNECT_TIMEOUT_SECONDS",
+                float(os.getenv("CLAUDE_CONNECT_TIMEOUT_SECONDS", "5")),
+            ),
+            read_timeout_seconds=_positive_float(
+                "AI_READ_TIMEOUT_SECONDS",
+                float(os.getenv("CLAUDE_READ_TIMEOUT_SECONDS", "45")),
+            ),
         )

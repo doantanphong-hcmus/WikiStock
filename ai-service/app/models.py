@@ -15,6 +15,12 @@ class RetrievalError(Exception):
         self.code = code
 
 
+class AiGenerationError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class Issue:
     code: str
@@ -66,3 +72,17 @@ class RetrievalResult:
     is_confident: bool
     evidence: tuple[RetrievedChunk, ...]
     duration_ms: float
+
+
+@dataclass(frozen=True)
+class EvidenceIdentity:
+    chunk_id: int
+    document_id: int
+
+
+@dataclass(frozen=True)
+class GeneratedAnswer:
+    answer: str
+    is_confident: bool
+    evidence: tuple[EvidenceIdentity, ...]
+    limitations: str | None = None

@@ -64,6 +64,12 @@ services:
       HF_HOME: /models
       RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-5}
       RETRIEVAL_MIN_SIMILARITY: ${RETRIEVAL_MIN_SIMILARITY:-0.35}
+      AI_PROVIDER: ${AI_PROVIDER:-demo}
+      AI_API_BASE_URL: ${AI_API_BASE_URL:-https://claude-api.zunef.com/v1/ai}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-sonnet-4-6}
+      AI_CONNECT_TIMEOUT_SECONDS: ${AI_CONNECT_TIMEOUT_SECONDS:-5}
+      AI_READ_TIMEOUT_SECONDS: ${AI_READ_TIMEOUT_SECONDS:-45}
       REDIS_HOST: redis
       REDIS_PORT: 6379
     volumes:
