@@ -56,16 +56,21 @@ function serviceUnavailable(details: string) {
   });
 }
 
-function serviceTimeout() {
+function serviceTimeout(timeoutMs: number) {
   return new GatewayTimeoutException({
     statusCode: 504,
     message: 'AI service timed out',
     data: null,
     error: {
       code: 'AI_SERVICE_TIMEOUT',
-      details: 'AI service did not respond within 3000ms',
+      details: `AI service did not respond within ${timeoutMs}ms`,
     },
   });
+}
+
+function aiServiceTimeoutMs(): number {
+  const configured = Number(process.env.AI_SERVICE_TIMEOUT_MS ?? 60_000);
+  return Number.isInteger(configured) && configured > 0 ? configured : 60_000;
 }
 
 function isTimeoutError(error: unknown) {
@@ -197,6 +202,7 @@ export class AiService {
   async ask(payload: AiAskRequest): Promise<ApiResponse<AiAskResponse>> {
     const baseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8000';
     const demoMode = process.env.AI_DEMO_MODE === 'true';
+    const timeoutMs = aiServiceTimeoutMs();
     const companyCode = (
       payload.companyCode ??
       payload.ticker ??
@@ -215,7 +221,7 @@ export class AiService {
           filters: payload.filters,
           conversationId: payload.conversationId,
         }),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
       if (demoMode) {
@@ -223,7 +229,7 @@ export class AiService {
       }
 
       if (isTimeoutError(error)) {
-        throw serviceTimeout();
+        throw serviceTimeout(timeoutMs);
       }
 
       throw serviceUnavailable('Could not connect to AI service');

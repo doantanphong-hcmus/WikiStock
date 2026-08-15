@@ -17,7 +17,12 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-60000}
+      AI_DEMO_MODE: ${AI_DEMO_MODE:-false}
+      SEED_DATA_PATH: /data/seed_data
       FRONTEND_URL: http://frontend:3000
+    volumes:
+      - "${RAG_SEED_DATA_PATH:-./docs/Seed_Daa/Báo cáo tài chính}:/data/seed_data:ro"
     ports:
       - "3001:3001"
     depends_on:

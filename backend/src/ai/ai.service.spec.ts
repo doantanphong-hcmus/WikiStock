@@ -23,9 +23,11 @@ describe('AiService', () => {
   const prisma = { documentChunk: { findMany } };
   const service = new AiService(prisma as unknown as PrismaService);
   const originalDemoMode = process.env.AI_DEMO_MODE;
+  const originalTimeout = process.env.AI_SERVICE_TIMEOUT_MS;
 
   beforeEach(() => {
     delete process.env.AI_DEMO_MODE;
+    delete process.env.AI_SERVICE_TIMEOUT_MS;
     findMany.mockReset();
   });
 
@@ -38,6 +40,11 @@ describe('AiService', () => {
       delete process.env.AI_DEMO_MODE;
     } else {
       process.env.AI_DEMO_MODE = originalDemoMode;
+    }
+    if (originalTimeout === undefined) {
+      delete process.env.AI_SERVICE_TIMEOUT_MS;
+    } else {
+      process.env.AI_SERVICE_TIMEOUT_MS = originalTimeout;
     }
   });
 
@@ -254,6 +261,23 @@ describe('AiService', () => {
         query: 'Timeout question',
       }),
     ).rejects.toBeInstanceOf(GatewayTimeoutException);
+  });
+
+  it('applies the configured AI service timeout', async () => {
+    process.env.AI_SERVICE_TIMEOUT_MS = '12345';
+    const timeout = jest
+      .spyOn(AbortSignal, 'timeout')
+      .mockReturnValue(AbortSignal.abort());
+    mockAiResponse({
+      answer: 'Not enough evidence.',
+      isConfident: false,
+      limitations: 'No evidence.',
+      evidence: [],
+    });
+
+    await service.ask({ companyCode: 'FPT', query: 'Question' });
+
+    expect(timeout).toHaveBeenCalledWith(12345);
   });
 
   it('returns 502 when AI service returns an HTTP error', async () => {
