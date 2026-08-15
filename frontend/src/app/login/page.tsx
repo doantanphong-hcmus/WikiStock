@@ -62,7 +62,7 @@ export default function LoginPage() {
   return (
     <div
       className="flex min-h-screen flex-col"
-      style={{ background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}
+      style={{ background: "#0F172A" }}
     >
       <header className="w-full px-6 py-6">
         <div className="mx-auto" style={{ maxWidth: 1440 }}>
@@ -170,8 +170,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-xl py-3.5 text-base font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-              style={{ fontFamily: fontBody, background: "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)" }}
+              className="w-full rounded-xl py-3.5 text-base font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+              style={{ fontFamily: fontBody, background: "#FFFFFF", color: "#0F172A" }}
             >
               {isLoading ? "Đang xử lý..." : "Đăng nhập"}
             </button>

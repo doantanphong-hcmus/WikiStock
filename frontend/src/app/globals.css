@@ -1,7 +1,7 @@
-@import "tailwindcss";
-
 /* Import Google Fonts for Vietnamese support */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;600;700&family=Lexend:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
 
 @theme inline {
   /* Fonts */
@@ -9,6 +9,7 @@
   --font-display: "Poppins", "Open Sans", "Roboto", "Segoe UI", sans-serif;
   --font-accent: "Crimson Text", "Georgia", serif;
   --font-body: "Poppins", "Open Sans", "Roboto", "Segoe UI", sans-serif;
+  --font-lexend: "Lexend", "Poppins", "Open Sans", sans-serif;
 
   /* Colors - Primary Brand */
   --color-navy: #0f172a;
@@ -126,4 +127,144 @@ a {
 ::selection {
   background: var(--color-cyan);
   color: var(--color-navy);
+}
+
+/* Swiper FreeMode Styles */
+.freemode-swiper {
+  width: 100%;
+  overflow: visible !important;
+  padding: 20px 0;
+}
+
+.freemode-swiper .swiper-slide {
+  width: auto;
+  height: auto;
+}
+
+.freemode-swiper .swiper-slide > div {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.freemode-swiper .swiper-slide:hover > div {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.freemode-swiper .swiper-wrapper {
+  align-items: flex-start;
+}
+
+/* Member Card CSS Mode */
+.member-card {
+  position: relative;
+  width: 680px;
+}
+
+/* Member Name - 150% */
+.member-name {
+  font-size: 1.5em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Member Role - 200%, same font and color as name */
+.member-role {
+  font-size: 2em;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Info Section */
+.member-info-section {
+  font-size: 1.5em;
+}
+
+/* Inline info row (Trường, Khoa/Ngành) - label and value on same line */
+.member-info-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-items: baseline;
+}
+
+.member-info-label {
+  font-weight: 700;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.member-info-value {
+  font-weight: 400;
+  color: #CBD5E1;
+}
+
+/* Block info (Công việc) */
+.member-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+
+.member-work-desc {
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: #94A3B8;
+}
+
+/* Sidebar animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-slideOut {
+  animation: slideOut 0.3s ease-in forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.2s ease-in forwards;
 }

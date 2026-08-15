@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const fontSans = "'Inter', 'Roboto', 'Open Sans', 'Segoe UI', sans-serif";
-const fontBody = "'Inter', 'Roboto', 'Open Sans', 'Segoe UI', sans-serif";
+const fontBody = "'Lexend', 'Poppins', sans-serif";
 
 interface Message {
   id: string;
@@ -97,11 +98,13 @@ export default function AIChatPage() {
       <header className="w-full px-6 py-4" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
         <div className="mx-auto flex items-center justify-between" style={{ maxWidth: 1440 }}>
           <div className="flex items-center gap-4">
-            <div className="rounded-lg px-4 py-2" style={{ background: "#101828" }}>
-              <span className="text-xl font-semibold" style={{ fontFamily: fontSans, color: "#FFFFFF", letterSpacing: "0.3px" }}>
-                WikiStock
-              </span>
-            </div>
+            <Link href="/">
+              <div className="rounded-lg px-4 py-2" style={{ background: "#101828" }}>
+                <span className="text-xl font-semibold" style={{ fontFamily: fontSans, color: "#FFFFFF", letterSpacing: "0.3px" }}>
+                  WikiStock
+                </span>
+              </div>
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm" style={{ fontFamily: fontBody, color: "#6B7280" }}>
@@ -121,14 +124,16 @@ export default function AIChatPage() {
           <div className="border-b p-4" style={{ borderColor: "#D1D5DB" }}>
             {/* WikiStock Logo */}
             <div className="mb-4 flex items-center gap-2">
-              <div className="rounded-lg px-4 py-2" style={{ background: "#101828" }}>
-                <span
-                  className="text-xl font-semibold"
-                  style={{ fontFamily: fontSans, color: "#FFFFFF", letterSpacing: "0.3px" }}
-                >
-                  WikiStock
-                </span>
-              </div>
+              <Link href="/">
+                <div className="rounded-lg px-4 py-2" style={{ background: "#101828" }}>
+                  <span
+                    className="text-xl font-semibold"
+                    style={{ fontFamily: fontSans, color: "#FFFFFF", letterSpacing: "0.3px" }}
+                  >
+                    WikiStock
+                  </span>
+                </div>
+              </Link>
             </div>
 
             <button
@@ -246,7 +251,7 @@ export default function AIChatPage() {
               <div className="flex h-full flex-col items-center justify-center">
                 <h1
                   className="mb-8 text-center text-4xl font-medium"
-                  style={{ fontFamily: fontSans, color: "#111827" }}
+                  style={{ fontFamily: fontBody, color: "#111827" }}
                 >
                   Let&apos;s start with today&apos;s topic!
                 </h1>
@@ -321,7 +326,7 @@ export default function AIChatPage() {
                             }
                       }
                     >
-                      <p className="text-base leading-relaxed" style={{ fontFamily: fontBody }}>
+                      <p className="text-base leading-relaxed" style={{ fontFamily: fontBody, lineHeight: 1.8 }}>
                         {message.content}
                       </p>
                       {message.role === "assistant" && (

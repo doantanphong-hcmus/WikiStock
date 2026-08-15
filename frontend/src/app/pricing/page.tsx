@@ -79,13 +79,13 @@ export default function PricingPage() {
               className={`relative rounded-3xl p-8 transition-all hover:scale-[1.02] ${plan.popular ? "scale-105" : ""}`}
               style={{
                 background: plan.popular ? "#1E293B" : "#0F172A",
-                border: plan.popular ? "2px solid #1CD8D2" : "1px solid #334155",
+                border: plan.popular ? "2px solid #FFFFFF" : "1px solid #334155",
               }}
             >
               {plan.popular && (
                 <div
                   className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-sm font-semibold"
-                  style={{ background: "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)", color: "#0F172A", fontFamily: fontBody }}
+                  style={{ background: "#FFFFFF", color: "#0F172A", fontFamily: fontBody }}
                 >
                   Phổ biến nhất
                 </div>
@@ -98,7 +98,7 @@ export default function PricingPage() {
               <div className="mb-4 flex items-baseline gap-1">
                 <span
                   className="text-5xl font-bold"
-                  style={{ fontFamily: fontSans, color: plan.popular ? "#1CD8D2" : "#FFFFFF" }}
+                  style={{ fontFamily: fontSans, color: plan.popular ? "#FFFFFF" : "#FFFFFF" }}
                 >
                   {plan.price}
                 </span>
@@ -116,7 +116,7 @@ export default function PricingPage() {
               <ul className="mb-8 space-y-3">
                 {plan.features.map((feature, featureIndex) => (
                   <li key={featureIndex} className="flex items-center gap-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={plan.popular ? "#1CD8D2" : "#94A3B8"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={plan.popular ? "#FFFFFF" : "#94A3B8"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                     <span className="text-sm" style={{ fontFamily: fontBody, color: "#CBD5E1" }}>
@@ -130,7 +130,7 @@ export default function PricingPage() {
                 className="w-full rounded-xl py-3.5 text-base font-semibold transition-all hover:opacity-90"
                 style={{
                   fontFamily: fontBody,
-                  background: plan.popular ? "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)" : "#334155",
+                  background: plan.popular ? "#FFFFFF" : "#334155",
                   color: plan.popular ? "#0F172A" : "#FFFFFF",
                 }}
               >

@@ -8,14 +8,14 @@ const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col" style={{ background: "#D9D9D9" }}>
+    <div
+      className="flex min-h-screen flex-col"
+      style={{ background: "#D9D9D9" }}
+    >
       <AppHeader />
 
       {/* Hero Section */}
-      <section
-        className="relative w-full"
-        style={{ height: 320 }}
-      >
+      <section className="relative w-full" style={{ height: 320 }}>
         {/* Background image - right side */}
         <div
           className="absolute inset-0"
@@ -37,7 +37,8 @@ export default function HomePage() {
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to right, #0F172A 0%, #0F172A 45%, transparent 100%)",
+            background:
+              "linear-gradient(to right, #0F172A 0%, #0F172A 45%, transparent 100%)",
           }}
         />
 
@@ -80,15 +81,14 @@ export default function HomePage() {
             {/* Robot icon */}
             <div
               className="flex-shrink-0"
-              style={{ width: 100, height: 100, zIndex: 20 }}
+              style={{
+                width: 100,
+                height: 100,
+                zIndex: 20,
+                borderRadius: "50%",
+                background: "#61e3f1",
+              }}
             >
-              <Image
-                src="/images/landing/robot-background.svg"
-                alt=""
-                width={100}
-                height={100}
-                className="absolute"
-              />
               <Image
                 src="/images/landing/robot.jpg"
                 alt="AI Assistant"
@@ -131,7 +131,7 @@ export default function HomePage() {
                 style={{
                   width: 48,
                   height: 48,
-                  background: "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)",
+                  background: "#61e3f1",
                 }}
               >
                 <Image
@@ -147,7 +147,10 @@ export default function HomePage() {
       </section>
 
       {/* Trusted Resources Section */}
-      <section className="w-full py-16" style={{ background: "#D9D9D9", marginTop: 40 }}>
+      <section
+        className="w-full py-16"
+        style={{ background: "#D9D9D9", marginTop: 40 }}
+      >
         <div className="mx-auto px-[110px]" style={{ maxWidth: 1440 }}>
           <h2
             className="text-center text-xl font-bold"
@@ -157,7 +160,7 @@ export default function HomePage() {
               color: "#000000",
             }}
           >
-            NGUỒN TIN CẬY NHẬT
+            NGUỒN TIN CẬP NHẬT
           </h2>
 
           <div
@@ -205,7 +208,10 @@ export default function HomePage() {
       </section>
 
       {/* Quick Actions */}
-      <section className="mx-auto w-full px-[110px] py-8" style={{ maxWidth: 1440 }}>
+      <section
+        className="mx-auto w-full px-[110px] py-8"
+        style={{ maxWidth: 1440 }}
+      >
         <div className="grid grid-cols-3 gap-6">
           <Link
             href="/ai"
@@ -217,19 +223,27 @@ export default function HomePage() {
           >
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
-              style={{ background: "linear-gradient(135deg, #1CD8D2 0%, #93EDC7 100%)" }}
+              style={{
+                background: "#498ab9",
+              }}
             >
               <Image
-                src="/images/landing/chat-icon.svg"
+                src="\images\landing\chatbot.svg"
                 alt="Chat"
                 width={24}
                 height={24}
               />
             </div>
-            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+            <h3
+              className="mb-2 text-xl font-semibold text-white"
+              style={{ fontFamily: fontSans }}
+            >
               Trò chuyện với AI
             </h3>
-            <p className="text-sm text-slate-400" style={{ fontFamily: fontBody }}>
+            <p
+              className="text-sm text-slate-400"
+              style={{ fontFamily: fontBody }}
+            >
               Đặt câu hỏi về doanh nghiệp và thông tin chứng khoán
             </p>
           </Link>
@@ -244,19 +258,27 @@ export default function HomePage() {
           >
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
-              style={{ background: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)" }}
+              style={{
+                background: "#dfdd56",
+              }}
             >
               <Image
-                src="/images/landing/company-icon.svg"
+                src="/images/landing/list.png"
                 alt="Companies"
                 width={24}
                 height={24}
               />
             </div>
-            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+            <h3
+              className="mb-2 text-xl font-semibold text-white"
+              style={{ fontFamily: fontSans }}
+            >
               Danh sách doanh nghiệp
             </h3>
-            <p className="text-sm text-slate-400" style={{ fontFamily: fontBody }}>
+            <p
+              className="text-sm text-slate-400"
+              style={{ fontFamily: fontBody }}
+            >
               Khám phá các doanh nghiệp niêm yết và chi tiết của chúng
             </p>
           </Link>
@@ -271,19 +293,27 @@ export default function HomePage() {
           >
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
-              style={{ background: "linear-gradient(135deg, #10B981 0%, #34D399 100%)" }}
+              style={{
+                background: "#73c13c",
+              }}
             >
               <Image
-                src="/images/landing/market-icon.svg"
+                src="/images/landing/pie-chart.png"
                 alt="Market"
                 width={24}
                 height={24}
               />
             </div>
-            <h3 className="mb-2 text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+            <h3
+              className="mb-2 text-xl font-semibold text-white"
+              style={{ fontFamily: fontSans }}
+            >
               Tổng quan thị trường
             </h3>
-            <p className="text-sm text-slate-400" style={{ fontFamily: fontBody }}>
+            <p
+              className="text-sm text-slate-400"
+              style={{ fontFamily: fontBody }}
+            >
               Xem dữ liệu và xu hướng thị trường theo thời gian thực
             </p>
           </Link>
