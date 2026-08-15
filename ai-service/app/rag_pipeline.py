@@ -93,9 +93,10 @@ def generate_grounded_answer(
     *,
     ai_settings: AiSettings | None = None,
     retrieval_settings: RetrievalSettings | None = None,
-    retriever: Callable[..., RetrievalResult] = retrieve_evidence,
+    retriever: Callable[..., RetrievalResult] | None = None,
     client: AiGatewayClient | None = None,
 ) -> GeneratedAnswer:
+    retriever = retriever or retrieve_evidence
     retrieval = retriever(
         query,
         company_code,
