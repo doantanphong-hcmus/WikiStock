@@ -12,7 +12,7 @@ export function FinancialTable({
     return (
       <EmptyState
         title="Chưa có dữ liệu tài chính"
-        message="Mock data hiện chưa có số liệu cho mã này."
+        message="Chưa có số liệu tài chính cho doanh nghiệp này."
       />
     );
   }
@@ -45,7 +45,9 @@ export function FinancialTable({
                 <td className="px-5 py-4 text-right tabular-nums text-zinc-950">
                   {numberFormatter.format(Number(lineItem.value))}
                 </td>
-                <td className="px-5 py-4 text-zinc-500">{lineItem.metric.unit}</td>
+                <td className="px-5 py-4 text-zinc-500">
+                  {lineItem.metric.unit}
+                </td>
               </tr>
             ))}
           </tbody>
