@@ -83,14 +83,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               <h2 className="mt-3 text-lg font-semibold text-zinc-950">
                 {company.companyName}
               </h2>
-              <p className="mt-2 text-sm text-zinc-600">{company.description}</p>
+              <p className="mt-2 text-sm text-zinc-600">
+                {company.description}
+              </p>
             </Link>
           ))}
         </div>
       ) : (
         <EmptyState
           title="Không có kết quả"
-          message="Mock data hiện có FPT và CMG cho luồng demo."
+          message="Không tìm thấy doanh nghiệp phù hợp."
         />
       )}
     </div>
