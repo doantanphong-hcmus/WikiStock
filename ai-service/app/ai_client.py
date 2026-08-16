@@ -31,13 +31,22 @@ class AiGatewayClient:
         )
         try:
             with httpx.Client(timeout=timeout, transport=self.transport) as client:
-                response = client.post(
-                    f"{self.settings.base_url.rstrip('/')}/messages",
-                    headers={
+                headers = {
+                    name: value for name, value in self.settings.custom_headers
+                }
+                headers.update(
+                    {
                         "anthropic-version": "2023-06-01",
                         "content-type": "application/json",
-                        "x-api-key": self.settings.api_key,
-                    },
+                    }
+                )
+                if self.settings.auth_scheme == "bearer":
+                    headers["authorization"] = f"Bearer {self.settings.api_key}"
+                else:
+                    headers["x-api-key"] = self.settings.api_key
+                response = client.post(
+                    f"{self.settings.base_url.rstrip('/')}/messages",
+                    headers=headers,
                     json={
                         "model": self.settings.model,
                         "max_tokens": 1200,

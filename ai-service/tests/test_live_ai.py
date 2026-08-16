@@ -10,8 +10,9 @@ from app.rag_pipeline import generate_grounded_answer
 
 
 @unittest.skipUnless(
-    os.getenv("RUN_LIVE_AI_TESTS") == "1" and os.getenv("AI_API_KEY"),
-    "set RUN_LIVE_AI_TESTS=1 and AI_API_KEY to run live gateway smoke tests",
+    os.getenv("RUN_LIVE_AI_TESTS") == "1"
+    and (os.getenv("AI_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")),
+    "set RUN_LIVE_AI_TESTS=1 and an AI gateway credential to run live tests",
 )
 class LiveAiSmokeTests(unittest.TestCase):
     def test_three_grounded_questions(self) -> None:

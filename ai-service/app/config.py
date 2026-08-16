@@ -36,8 +36,21 @@ def _positive_float(name: str, default: float) -> float:
     return value
 
 
-def _ai_env(name: str, legacy_name: str, default: str) -> str:
-    return os.getenv(name, os.getenv(legacy_name, default))
+def _first_nonempty(*names: str, default: str = "") -> str:
+    return next(
+        (value for name in names if (value := os.getenv(name, "").strip())),
+        default,
+    )
+
+
+def _custom_headers(raw_value: str) -> tuple[tuple[str, str], ...]:
+    headers = []
+    for line in raw_value.splitlines():
+        name, separator, value = line.partition(":")
+        if not separator or not name.strip() or not value.strip():
+            raise ValueError("AI_CUSTOM_HEADERS must contain 'Name: value' lines")
+        headers.append((name.strip(), value.strip()))
+    return tuple(headers)
 
 
 @dataclass(frozen=True)
@@ -125,6 +138,8 @@ class AiSettings:
     provider: str = "demo"
     base_url: str = "https://claude-api.zunef.com/v1/ai"
     api_key: str = ""
+    auth_scheme: str = "x-api-key"
+    custom_headers: tuple[tuple[str, str], ...] = ()
     model: str = "claude-sonnet-4-6"
     connect_timeout_seconds: float = 5
     read_timeout_seconds: float = 45
@@ -132,6 +147,8 @@ class AiSettings:
     def __post_init__(self) -> None:
         if self.provider not in {"demo", "gateway", "claude_proxy"}:
             raise ValueError("AI_PROVIDER must be demo or gateway")
+        if self.auth_scheme not in {"x-api-key", "bearer"}:
+            raise ValueError("AI_AUTH_SCHEME must be x-api-key or bearer")
         if not self.base_url.strip():
             raise ValueError("AI_API_BASE_URL must not be empty")
         if not self.model.strip():
@@ -143,15 +160,35 @@ class AiSettings:
 
     @classmethod
     def from_env(cls) -> "AiSettings":
+        direct_api_key = _first_nonempty(
+            "AI_API_KEY", "CLAUDE_API_KEY", "ANTHROPIC_API_KEY"
+        )
+        auth_token = _first_nonempty("ANTHROPIC_AUTH_TOKEN")
         return cls(
             provider=os.getenv("AI_PROVIDER", "demo").strip().lower(),
-            base_url=_ai_env(
+            base_url=_first_nonempty(
                 "AI_API_BASE_URL",
                 "CLAUDE_API_BASE_URL",
-                "https://claude-api.zunef.com/v1/ai",
+                "ANTHROPIC_BASE_URL",
+                default="https://claude-api.zunef.com/v1/ai",
             ),
-            api_key=_ai_env("AI_API_KEY", "CLAUDE_API_KEY", ""),
-            model=_ai_env("AI_MODEL", "CLAUDE_MODEL", "claude-sonnet-4-6"),
+            api_key=direct_api_key or auth_token,
+            auth_scheme=os.getenv(
+                "AI_AUTH_SCHEME", "x-api-key" if direct_api_key else "bearer"
+            )
+            .strip()
+            .lower(),
+            custom_headers=_custom_headers(
+                _first_nonempty(
+                    "AI_CUSTOM_HEADERS", "ANTHROPIC_CUSTOM_HEADERS"
+                )
+            ),
+            model=_first_nonempty(
+                "AI_MODEL",
+                "CLAUDE_MODEL",
+                "ANTHROPIC_MODEL",
+                default="claude-sonnet-4-6",
+            ),
             connect_timeout_seconds=_positive_float(
                 "AI_CONNECT_TIMEOUT_SECONDS",
                 float(os.getenv("CLAUDE_CONNECT_TIMEOUT_SECONDS", "5")),
