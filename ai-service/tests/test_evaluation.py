@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app.config import RetrievalSettings
 from app.evaluation import GoldenCase, evaluate, load_cases, write_reports
-from app.models import RetrievalResult, RetrievedChunk
+from app.models import AiGenerationError, RetrievalResult, RetrievedChunk
 
 
 def _chunk(chunk_id: int, page: int, content: str) -> RetrievedChunk:
@@ -139,6 +139,42 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(report["metrics"]["citationPrecision"], 1.0)
         self.assertEqual(report["metrics"]["abstentionAccuracy"], 1.0)
         self.assertTrue(report["passed"])
+
+    def test_provider_error_is_reported_without_aborting_evaluation(self) -> None:
+        case = GoldenCase(
+            "provider-error",
+            "exact_fact",
+            "revenue",
+            "FPT",
+            2026,
+            (),
+            "FPT.*2026",
+            (3,),
+            ("revenue",),
+            True,
+        )
+
+        class FailingClient:
+            @staticmethod
+            def generate(system_prompt: str, user_prompt: str) -> str:
+                del system_prompt, user_prompt
+                raise AiGenerationError("AI_INVALID_RESPONSE", "invalid")
+
+        report = evaluate(
+            [case],
+            RetrievalSettings(database_url="unused"),
+            live_provider=True,
+            retriever=lambda *args, **kwargs: RetrievalResult(
+                True, (_chunk(1, 3, "revenue evidence"),), 1.0
+            ),
+            client=FailingClient(),  # type: ignore[arg-type]
+        )
+
+        self.assertEqual(report["metrics"]["providerErrors"], 1)
+        self.assertEqual(
+            report["cases"][0]["providerError"], "AI_INVALID_RESPONSE"
+        )
+        self.assertFalse(report["passed"])
 
 
 if __name__ == "__main__":

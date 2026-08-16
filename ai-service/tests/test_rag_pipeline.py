@@ -59,6 +59,15 @@ class RagPipelineTests(unittest.TestCase):
         self.assertEqual(answer.evidence[0].chunk_id, 123)
         self.assertEqual(answer.evidence[0].document_id, 8)
 
+    def test_accepts_json_after_provider_preamble(self) -> None:
+        answer, _ = self.run_with(
+            'I will answer from the supplied evidence.\n'
+            '{"answer":"Revenue increased.","isConfident":true,'
+            '"usedChunkIds":[123],"limitations":null}'
+        )
+        self.assertTrue(answer.is_confident)
+        self.assertEqual(answer.evidence[0].chunk_id, 123)
+
     def test_rejects_malformed_json_and_missing_fields(self) -> None:
         for response in (
             "not json",

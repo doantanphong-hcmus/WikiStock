@@ -80,12 +80,20 @@ def _parse_model_answer(text: str) -> _ModelAnswer:
     if value.startswith("```") and value.endswith("```"):
         lines = value.splitlines()
         value = "\n".join(lines[1:-1]).strip()
-    try:
-        return _ModelAnswer.model_validate_json(value)
-    except (ValidationError, ValueError, json.JSONDecodeError) as error:
-        raise AiGenerationError(
-            "AI_INVALID_RESPONSE", "AI returned invalid answer JSON"
-        ) from error
+    error: Exception | None = None
+    starts = [
+        0,
+        *(index for index, char in reversed(list(enumerate(value))) if char == "{"),
+    ]
+    for start in starts:
+        try:
+            payload, _ = json.JSONDecoder().raw_decode(value[start:])
+            return _ModelAnswer.model_validate(payload)
+        except (ValidationError, ValueError, json.JSONDecodeError) as caught:
+            error = caught
+    raise AiGenerationError(
+        "AI_INVALID_RESPONSE", "AI returned invalid answer JSON"
+    ) from error
 
 
 def generate_grounded_answer(

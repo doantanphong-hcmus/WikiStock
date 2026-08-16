@@ -10,7 +10,12 @@ from typing import Callable, Sequence
 
 from app.ai_client import AiGatewayClient
 from app.config import AiSettings, RetrievalSettings
-from app.models import GeneratedAnswer, RetrievalResult, RetrievedChunk
+from app.models import (
+    AiGenerationError,
+    GeneratedAnswer,
+    RetrievalResult,
+    RetrievedChunk,
+)
 from app.rag_pipeline import generate_grounded_answer
 from app.retrieval import retrieve_evidence
 
@@ -91,6 +96,7 @@ def evaluate(
     total_citations = 0
     correct_abstentions = 0
     confidence_matches = 0
+    provider_errors = 0
 
     for case in cases:
         retrieval = retriever(
@@ -105,6 +111,7 @@ def evaluate(
         recall_hits += int(case.should_be_confident and recall_hit)
         generated: GeneratedAnswer | None = None
         cited_chunks: list[RetrievedChunk] = []
+        provider_error: str | None = None
 
         if use_provider:
             case_client = client
@@ -140,29 +147,34 @@ def evaluate(
                         )
 
                 case_client = FixtureClient()  # type: ignore[assignment]
-            generated = generate_grounded_answer(
-                case.question,
-                case.company_code,
-                case.fiscal_year,
-                case.document_types,
-                retriever=lambda *args, result=retrieval, **kwargs: result,
-                client=case_client,
-            )
-            cited_chunks = [
-                chunks_by_id[item.chunk_id]
-                for item in generated.evidence
-                if item.chunk_id in chunks_by_id
-            ]
-            total_citations += len(cited_chunks)
-            supporting_citations += sum(
-                _supports(case, chunk) for chunk in cited_chunks
-            )
-            correct_abstentions += int(
-                not case.should_be_confident and not generated.is_confident
-            )
-            confidence_matches += int(
-                generated.is_confident == case.should_be_confident
-            )
+            try:
+                generated = generate_grounded_answer(
+                    case.question,
+                    case.company_code,
+                    case.fiscal_year,
+                    case.document_types,
+                    retriever=lambda *args, result=retrieval, **kwargs: result,
+                    client=case_client,
+                )
+            except AiGenerationError as error:
+                provider_error = error.code
+                provider_errors += 1
+            if generated is not None:
+                cited_chunks = [
+                    chunks_by_id[item.chunk_id]
+                    for item in generated.evidence
+                    if item.chunk_id in chunks_by_id
+                ]
+                total_citations += len(cited_chunks)
+                supporting_citations += sum(
+                    _supports(case, chunk) for chunk in cited_chunks
+                )
+                correct_abstentions += int(
+                    not case.should_be_confident and not generated.is_confident
+                )
+                confidence_matches += int(
+                    generated.is_confident == case.should_be_confident
+                )
 
         rows.append(
             {
@@ -181,6 +193,7 @@ def evaluate(
                     if generated is not None
                     else None
                 ),
+                "providerError": provider_error,
                 "durationMs": round(retrieval.duration_ms, 2),
             }
         )
@@ -206,6 +219,7 @@ def evaluate(
             passed
             and citation_precision == 1.0
             and abstention_accuracy == 1.0
+            and provider_errors == 0
         )
 
     return {
@@ -232,6 +246,7 @@ def evaluate(
                 if confidence_accuracy is not None
                 else None
             ),
+            "providerErrors": provider_errors,
             "coldStartMs": round(cold_start_ms, 2),
             "retrievalP95Ms": round(retrieval_p95, 2),
         },
@@ -262,6 +277,7 @@ def write_reports(report: dict[str, object], output: Path) -> None:
         f"- Recall@5: `{metrics['recallAt5']}`",
         f"- Citation precision: `{metrics['citationPrecision']}`",
         f"- Abstention accuracy: `{metrics['abstentionAccuracy']}`",
+        f"- Provider errors: `{metrics['providerErrors']}`",
         f"- Cold start: `{metrics['coldStartMs']} ms`",
         f"- Retrieval p95: `{metrics['retrievalP95Ms']} ms`",
         f"- Passed: `{report['passed']}`",
