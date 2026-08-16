@@ -17,4 +17,3 @@ DB_CONFIG = {
 
 DEMO_TICKERS = ("FPT", "GAS", "HPG", "HSG", "MWG", "SSI", "VCB", "VCG", "VIC", "VNM")
 VNSTOCK_SOURCE_NAME = "vnstock"
-

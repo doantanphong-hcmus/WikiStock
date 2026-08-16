@@ -41,4 +41,3 @@ def crawl_company(ticker):
 
 if __name__ == "__main__":
     print(crawl_company("FPT"))
-

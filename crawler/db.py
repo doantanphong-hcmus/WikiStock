@@ -127,4 +127,3 @@ def write_ingestion_log(status, records_fetched, error_message=None):
             """,
             (source_id, status, records_fetched, error_message),
         )
-
