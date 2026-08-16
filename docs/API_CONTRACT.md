@@ -427,7 +427,7 @@ Admin không được tự hạ role của chính mình để tránh tự khoá 
 
 ## 5. AI Web-Facing
 
-Skeleton hiện tại dùng:
+Endpoint công khai hiện tại:
 
 ```text
 POST /api/v1/ai/ask
@@ -473,3 +473,33 @@ Response dùng public citation contract sau khi Backend đã xác thực và chu
 ```
 
 SSE endpoint `GET /api/v1/chat/stream` vẫn là mục tiêu sau, chưa phải endpoint chính trong skeleton hiện tại.
+
+### 5.1. Quy tắc an toàn của endpoint AI
+
+- `isConfident=true` bắt buộc đi cùng ít nhất một citation canonical.
+- AI Service không được tự tạo URL hoặc metadata citation.
+- Backend phải xác minh chunk thuộc đúng document `ready` và đúng doanh nghiệp.
+- Câu thiếu dữ liệu trả `isConfident=false`; không được biến thành kết luận tài chính chắc chắn.
+- `AI_DEMO_MODE=false` là bắt buộc khi nghiệm thu online và production.
+- Provider lỗi không được che bằng response demo trong real path.
+
+### 5.2. Mã lỗi công khai của luồng AI
+
+| HTTP | Mã lỗi | Khi nào xảy ra |
+|---:|---|---|
+| 502 | `AI_SERVICE_UNAVAILABLE` | Backend không kết nối được hoặc AI Service trả lỗi |
+| 504 | `AI_SERVICE_TIMEOUT` | AI Service không phản hồi trong timeout của Backend |
+| 502 | `AI_INVALID_RESPONSE` | Response không phải JSON hoặc sai contract answer/confidence |
+| 502 | `AI_INVALID_EVIDENCE` | Evidence sai identity, không tồn tại hoặc không có citation canonical |
+
+Mã lỗi chi tiết bên trong AI Service và hướng xử lý vận hành được ghi tại [`RAG_KNOWN_LIMITATIONS.md`](RAG_KNOWN_LIMITATIONS.md).
+
+### 5.3. Citation URL
+
+Với tài liệu local, `sourceUrl` là URL tương đối của Backend, ví dụ:
+
+```text
+/api/v1/documents/8/file
+```
+
+Client nối URL này với origin của Backend. `locationRef` chứa số trang; giao diện có thể mở PDF với fragment `#page=N`, nhưng vẫn phải hiển thị location để người dùng tự đối chiếu.
