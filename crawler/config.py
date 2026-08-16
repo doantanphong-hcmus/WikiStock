@@ -1,10 +1,16 @@
 """Cấu hình dùng chung cho crawler WikiStock."""
 
 import os
+import sys
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Giữ log tiếng Việt đọc được trên PowerShell dùng bảng mã cũ.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8", errors="replace")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_CONFIG = {

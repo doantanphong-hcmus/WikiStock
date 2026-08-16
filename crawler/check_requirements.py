@@ -4,6 +4,8 @@ import platform
 import struct
 import sys
 
+import config  # Import để cấu hình UTF-8 cho console Windows.
+
 
 def main():
     errors = []
