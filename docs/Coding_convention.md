@@ -31,7 +31,7 @@ WikiStock/
 ├── ai-service/      # FastAPI, RAG, LLM, embeddings
 ├── crawler/         # Thu thập, parse, làm sạch và nạp dữ liệu
 ├── docs/            # Tài liệu dự án, API contract, quy chuẩn
-├── schema.sql       # Nguồn chuẩn tuyệt đối của database
+├── backend/prisma/migrations/ # Lịch sử chuẩn để tạo và nâng cấp database
 └── compose.yaml
 ```
 
@@ -41,7 +41,7 @@ Quy định:
 - Frontend không được kết nối trực tiếp vào database.
 - Backend là lớp API chính cho Frontend.
 - AI Service cung cấp API nội bộ để Backend gọi.
-- Crawler phải ghi dữ liệu đã chuẩn hóa theo đúng `schema.sql`.
+- Crawler phải ghi dữ liệu đã chuẩn hóa theo đúng migration và Prisma schema hiện tại.
 - Tài liệu ảnh hưởng đến cách triển khai phải đặt trong `docs/`.
 
 ---
@@ -186,7 +186,7 @@ model Company {
 Quy định:
 
 - Tên field trong Prisma nên thân thiện với code TypeScript.
-- Mapping xuống SQL phải trung thành với `schema.sql`.
+- Mapping xuống SQL phải trung thành với `backend/prisma/migrations` và Prisma schema.
 - Dùng tên relation rõ ràng khi Prisma không thể tự suy luận chính xác.
 - Các bảng nối nhiều-nhiều đã được định nghĩa trong SQL phải được biểu diễn bằng model riêng trong Prisma.
 
@@ -600,7 +600,7 @@ Một task chỉ được xem là xong khi:
 - Tài liệu liên quan đã cập nhật.
 - Build và test pass.
 - Không commit secret hoặc file chỉ dùng local.
-- Implementation tuân thủ `schema.sql` và API contract.
+- Implementation tuân thủ migration database và API contract.
 - Reviewer có thể hiểu thay đổi mà không cần hỏi lại bối cảnh bị thiếu.
 
 ---
@@ -609,7 +609,7 @@ Một task chỉ được xem là xong khi:
 
 Các quy định sau là bắt buộc:
 
-1. `schema.sql` là nguồn chuẩn của database.
+1. `backend/prisma/migrations` là lịch sử chuẩn của database.
 2. AI không được bịa số liệu tài chính.
 3. Nhận định AI quan trọng phải có citation.
 4. Không đưa khuyến nghị mua/bán trực tiếp.
