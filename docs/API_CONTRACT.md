@@ -203,7 +203,7 @@ Query parameters:
 
 | Tham số | Bắt buộc | Quy tắc |
 |---|---|---|
-| `year` | Không | Năm tài chính dạng số nguyên |
+| `year` | Không | Năm tài chính gồm 4 chữ số, từ `1900` đến `9999` |
 | `quarter` | Không | Quý từ `1` đến `4`; chỉ hợp lệ khi có `year` |
 
 Hành vi đã chốt cho V1:
