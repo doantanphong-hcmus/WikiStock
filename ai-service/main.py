@@ -83,7 +83,12 @@ def run_answer(payload: AskRequest) -> AskData:
 
 def error_response(error: RetrievalError | AiGenerationError) -> JSONResponse:
     if isinstance(error, RetrievalError):
-        status_code = 404 if error.code == 'UNKNOWN_COMPANY_CODE' else 400
+        if error.code == 'UNKNOWN_COMPANY_CODE':
+            status_code = 404
+        elif error.code == 'DATABASE_UNAVAILABLE':
+            status_code = 503
+        else:
+            status_code = 400
         message = 'RAG retrieval failed'
     else:
         status_code = 504 if error.code in {'AI_CONNECT_TIMEOUT', 'AI_READ_TIMEOUT'} else 502

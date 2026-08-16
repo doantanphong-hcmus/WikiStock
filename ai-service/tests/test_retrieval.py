@@ -141,6 +141,23 @@ class RetrievalUnitTests(unittest.TestCase):
         self.assertFalse(result.is_confident)
         self.assertEqual(result.evidence, ())
 
+    def test_maps_database_failure_without_exposing_details(self) -> None:
+        database = Mock()
+        database.filter_state.side_effect = psycopg.OperationalError(
+            "password=must-not-escape"
+        )
+
+        with self.assertRaises(RetrievalError) as context:
+            retrieve_evidence(
+                "query",
+                "FPT",
+                settings=RetrievalSettings(database_url="unused"),
+                database=database,
+            )
+
+        self.assertEqual(context.exception.code, "DATABASE_UNAVAILABLE")
+        self.assertNotIn("must-not-escape", str(context.exception))
+
 
 @unittest.skipUnless(os.getenv("TEST_DATABASE_URL"), "TEST_DATABASE_URL is not set")
 class RetrievalIntegrationTests(unittest.TestCase):
