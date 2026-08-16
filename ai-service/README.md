@@ -10,7 +10,7 @@ The current gateway is Anthropic Messages-compatible. The API key must only exis
 | Base URL | `https://claude-api.zunef.com/v1/ai` |
 | List models | `GET /models` |
 | Create message | `POST /messages` |
-| Authentication | `x-api-key: $AI_API_KEY` |
+| Authentication | `x-api-key` with `AI_API_KEY`, or Bearer with `ANTHROPIC_AUTH_TOKEN` |
 | Request style | Anthropic Messages-compatible; live success verified |
 | API version header | `anthropic-version: 2023-06-01`; accepted by Zunef |
 | Verified model | `claude-sonnet-4-6` |
@@ -215,7 +215,7 @@ never hidden by a demo fallback.
 The model receives canonical chunk headers and untrusted source text. Its JSON
 output is strictly validated, including the rule that every selected chunk ID
 must belong to the retrieved context. The internal endpoint returns only
-`chunkId` and `documentId`; R7 will resolve public citation metadata from the
+`chunkId` and `documentId`; Backend resolves public citation metadata from the
 database.
 
 Run the normal suite without a provider key:
@@ -234,8 +234,10 @@ python -m unittest tests.test_live_ai -v
 unset RUN_LIVE_AI_TESTS AI_API_KEY
 ```
 
-Legacy `CLAUDE_*` environment names remain accepted for existing local setups,
-but new configuration should use the provider-neutral `AI_*` names above.
+Legacy `CLAUDE_*` and Anthropic-compatible `ANTHROPIC_*` environment names
+remain accepted. New application configuration should prefer provider-neutral
+`AI_*` names. `ANTHROPIC_CUSTOM_HEADERS` and `AI_CUSTOM_HEADERS` accept one
+`Name: value` header per line.
 
 | Variable | Default |
 |---|---:|
@@ -259,3 +261,41 @@ Local acceptance on 2026-08-15 used all 930 OCR-backed chunks with PostgreSQL
 18 and pgvector 0.8.6. An FPT Q1/2026 revenue question returned five FPT 2026
 chunks; the two highest-ranked chunks were both on page 8 with similarities
 `0.7364` and `0.7164`. Across 100 exact SQL searches, p95 was `141.10 ms`.
+
+## R8 evaluation
+
+The committed fixture contains 20 questions grounded manually against the 12
+OCR-backed PDFs. Run retrieval-only evaluation without an AI credential:
+
+```bash
+python -m app.evaluation
+```
+
+Run the deterministic fake-provider gate to verify evidence selection,
+citation precision, and abstention without Internet access:
+
+```bash
+python -m app.evaluation \
+  --fake-provider \
+  --output reports/rag_evaluation_fake_provider
+```
+
+The live-provider mode is manual and never runs in the default test suite:
+
+```bash
+python -m app.evaluation --live-provider --output reports/rag_evaluation_live
+```
+
+Current offline baseline on the 930 real chunks:
+
+| Metric | Result | Gate |
+|---|---:|---:|
+| Recall@5 | 0.8125 | >= 0.80 |
+| Citation precision | 1.00 | = 1.00 |
+| Unsupported abstention accuracy | 1.00 | = 1.00 |
+| Cold start | 5048.42 ms | Recorded separately |
+| Retrieval p95 | 227.83 ms | <= 300 ms |
+
+The citation and abstention figures use the deterministic fake provider. They
+prove the offline evidence-validation path; they are not presented as a live
+model quality score.
