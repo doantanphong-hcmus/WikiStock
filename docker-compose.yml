@@ -8,20 +8,20 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3001
-      JWT_SECRET: wikistock-dev-secret-key-2026
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: app_user
-      DB_PASSWORD: app_password
-      DB_NAME: app_db
-      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      AI_SERVICE_URL: http://ai-service:8000
+      JWT_SECRET: ${JWT_SECRET:-replace_with_at_least_32_random_characters}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-app_user}
+      DB_PASSWORD: ${DB_PASSWORD:-app_password}
+      DB_NAME: ${DB_NAME:-app_db}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://app_user:app_password@postgres:5432/app_db}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-60000}
       AI_DEMO_MODE: ${AI_DEMO_MODE:-false}
       SEED_DATA_PATH: ${SEED_DATA_PATH:-/data/seed_data}
-      FRONTEND_URL: http://frontend:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     volumes:
       - "${RAG_SEED_DATA_PATH:-./docs/Seed_Daa/Báo cáo tài chính}:/data/seed_data:ro"
     ports:
@@ -47,7 +47,7 @@ services:
     restart: "no"
     command: ["npm", "run", "db:bootstrap"]
     environment:
-      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
+      DATABASE_URL: ${DATABASE_URL:-postgresql://app_user:app_password@postgres:5432/app_db}
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,7 +62,7 @@ services:
     container_name: frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://backend:3001/api/v1
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3001/api/v1}
     ports:
       - "3000:3000"
     depends_on:
@@ -78,12 +78,12 @@ services:
     container_name: ai_service
     restart: unless-stopped
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: app_user
-      DB_PASSWORD: app_password
-      DB_NAME: app_db
-      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-app_user}
+      DB_PASSWORD: ${DB_PASSWORD:-app_password}
+      DB_NAME: ${DB_NAME:-app_db}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://app_user:app_password@postgres:5432/app_db}
       SEED_DATA_PATH: ${SEED_DATA_PATH:-/data/seed_data}
       HF_HOME: /models
       MAX_PDF_SIZE_MB: ${MAX_PDF_SIZE_MB:-100}
@@ -102,8 +102,8 @@ services:
       AI_CUSTOM_HEADERS: ${AI_CUSTOM_HEADERS:-}
       AI_CONNECT_TIMEOUT_SECONDS: ${AI_CONNECT_TIMEOUT_SECONDS:-5}
       AI_READ_TIMEOUT_SECONDS: ${AI_READ_TIMEOUT_SECONDS:-45}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     volumes:
       - "${RAG_SEED_DATA_PATH:-./docs/Seed_Daa/Báo cáo tài chính}:/data/seed_data:ro"
       - model_cache:/models
@@ -125,15 +125,15 @@ services:
     container_name: postgres_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: app_password
-      POSTGRES_DB: app_db
+      POSTGRES_USER: ${DB_USER:-app_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-app_password}
+      POSTGRES_DB: ${DB_NAME:-app_db}
     expose:
       - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_user -d app_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
