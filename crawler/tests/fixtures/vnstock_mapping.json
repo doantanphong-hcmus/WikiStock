@@ -1,0 +1,19 @@
+{
+  "profile": {
+    "input": {
+      "organ_name": "Công ty Cổ phần FPT",
+      "issue_share": 1000,
+      "web_url": "https://fpt.com",
+      "company_profile": "Doanh nghiệp công nghệ"
+    },
+    "expected_name": "Công ty Cổ phần FPT",
+    "expected_capital": 10000000,
+    "expected_website": "https://fpt.com"
+  },
+  "period_columns": ["item_id", "Q3 2025", "2025-Q4", "2024Q4", "không hợp lệ", "2026-Q1"],
+  "expected_periods": [[2026, 1], [2025, 4], [2025, 3], [2024, 4]],
+  "urls": {
+    "valid": ["https://example.com/news/1", "http://news.example.vn/a"],
+    "invalid": ["/news/1", "example.com/news/1", "javascript:alert(1)", ""]
+  }
+}

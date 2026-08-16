@@ -1,0 +1,7 @@
+.env
+__pycache__/
+.venv/
+venv/
+# VNStock tự sinh các hướng dẫn AI này khi import.
+AGENTS.md
+.agents/
