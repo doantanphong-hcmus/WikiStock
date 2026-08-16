@@ -6,7 +6,7 @@ Chào mừng đến với repository của dự án **WikiStock** - sản phẩm
 
 WikiStock là nền tảng tri thức tài chính tích hợp AI dành cho thị trường chứng khoán Việt Nam. Khác với các ứng dụng giao dịch hoặc chatbot AI thông thường, WikiStock được định vị như một Wikipedia cho doanh nghiệp niêm yết. 
 
-Dự án giải quyết bài toán thiếu hụt một nơi duy nhất để người dùng phổ thông có thể tra cứu, hiểu và so sánh thông tin doanh nghiệp một cách minh bạch. Điểm khác biệt lớn nhất của WikiStock nằm ở tính năng **AI Analyst**: mọi câu trả lời do AI tạo ra đều dựa trên luồng RAG và bắt buộc phải **kèm theo trích dẫn nguồn** từ các tài liệu chính thống (BCTC, cáo bạch, nghị quyết...), giúp loại bỏ hoàn toàn rủi ro AI bị Hallucination.
+Dự án giải quyết bài toán thiếu hụt một nơi duy nhất để người dùng phổ thông có thể tra cứu, hiểu và so sánh thông tin doanh nghiệp một cách minh bạch. Điểm khác biệt lớn nhất của WikiStock nằm ở tính năng **AI Analyst**: câu trả lời tự tin phải dựa trên luồng RAG và kèm trích dẫn từ tài liệu nguồn. Cơ chế này giúp người dùng kiểm chứng thông tin và giảm rủi ro AI trả lời thiếu căn cứ; nó không được xem là cam kết loại bỏ hoàn toàn hallucination.
 
 ## Đội Ngũ Thực Hiện
 
@@ -29,50 +29,71 @@ Dự án được tổ chức theo kiến trúc Monorepo để tối ưu hóa qu
 WikiStock/
 ├── frontend/           # Next.js, React, TailwindCSS (Giao diện Web App)
 ├── backend/            # NestJS, TypeScript (Cổng API nghiệp vụ, xác thực)
-├── ai-service/         # Python, FastAPI, LangChain (Luồng xử lý AI & RAG)
+├── ai-service/         # Python, FastAPI, PostgreSQL/pgvector (AI & RAG)
+├── crawler/            # Thu thập dữ liệu doanh nghiệp và tài chính
+├── docs/               # API contract, runbook và tài liệu nguồn
+├── scripts/ocr/        # Tiền xử lý OCR cho PDF scan
 ├── .gitignore          # Ẩn các file environment và dependencies
 └── README.md           # Tài liệu dự án (bạn đang đọc file này)
 ```
 
-## Local Development Ports
+## Cổng phát triển local
 
 - Frontend: http://localhost:3000
 - Backend health: http://localhost:3001/api/health
 - Backend API v1: http://localhost:3001/api/v1
 - AI service: http://localhost:8000
 
-## Chạy Local Skeleton
+## Chạy nhanh bằng Docker Compose
 
 Toàn bộ stack:
 
-```bash
-cp .env.example .env
-docker compose up --build
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --build
 ```
 
-Compose waits for PostgreSQL, applies `backend/prisma/migrations`, seeds the V1
-lookups, verifies pgvector, and only then starts Backend and AI Service.
+Compose chờ PostgreSQL sẵn sàng, chạy migration và seed dữ liệu tham chiếu, kiểm tra pgvector rồi mới khởi động Backend và AI Service.
 
-```bash
+```powershell
 docker compose down
 ```
 
-Chạy từng service ngoài Docker:
+Mặc định `AI_PROVIDER=demo`, vì vậy chế độ này không gọi provider AI và luôn trả kết quả không tự tin. Để chạy RAG online hoặc dựng pipeline từ database sạch, làm theo [runbook vận hành RAG](docs/RAG_OPERATIONS_RUNBOOK.md).
 
-```bash
+## Chạy từng service ngoài Docker
+
+```powershell
 cd backend
-npm install
+npm ci
+npm run db:bootstrap
 npm run start:dev
 ```
 
-```bash
+```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-```bash
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r ai-service\requirements.txt
 cd ai-service
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+..\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
 ```
+
+## Tài liệu vận hành
+
+- [Runbook RAG từ database sạch](docs/RAG_OPERATIONS_RUNBOOK.md)
+- [Giới hạn đã biết và cách xử lý lỗi](docs/RAG_KNOWN_LIMITATIONS.md)
+- [API contract](docs/API_CONTRACT.md)
+- [Tiền xử lý OCR](docs/OCR_PREPROCESSING.md)
+- [Rủi ro độ tin cậy sau R8](docs/R8_POST_EVALUATION_RISK.md)
+
+## Nguyên tắc an toàn
+
+- Không commit `.env`, API key, token, cache model hoặc output OCR.
+- Không dùng chế độ demo để chứng minh RAG/provider thật đang hoạt động.
+- Không hiển thị câu trả lời tài chính như đã được xác minh khi thiếu citation hợp lệ.
+- Luôn mở PDF và đối chiếu đúng trang trước khi nghiệm thu thủ công.

@@ -136,7 +136,7 @@ class RetrievalSettings:
 @dataclass(frozen=True)
 class AiSettings:
     provider: str = "demo"
-    base_url: str = "https://claude-api.zunef.com/v1/ai"
+    base_url: str = "https://claude.zunef.com/v1/ai"
     api_key: str = ""
     auth_scheme: str = "x-api-key"
     custom_headers: tuple[tuple[str, str], ...] = ()
@@ -170,7 +170,7 @@ class AiSettings:
                 "AI_API_BASE_URL",
                 "CLAUDE_API_BASE_URL",
                 "ANTHROPIC_BASE_URL",
-                default="https://claude-api.zunef.com/v1/ai",
+                default="https://claude.zunef.com/v1/ai",
             ),
             api_key=direct_api_key or auth_token,
             auth_scheme=os.getenv(
