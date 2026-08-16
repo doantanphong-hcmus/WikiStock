@@ -9,7 +9,7 @@ import {
   ApiResponse,
   Citation,
 } from '../common/types/api.types';
-import { mockCitations, mockDocuments } from '../common/mock-data/companies';
+import { mockCitations } from '../common/mock-data/companies';
 import { PrismaService } from '../database/prisma.service';
 
 type JsonObject = Record<string, unknown>;

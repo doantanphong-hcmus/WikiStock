@@ -203,7 +203,11 @@ describe('AiService', () => {
     const result = await service.ask({ companyCode: 'FPT', query: 'Question' });
 
     expect(findMany).toHaveBeenCalledTimes(1);
-    expect(findMany.mock.calls[0][0].where.chunkId.in).toEqual([1, 2]);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { chunkId: { in: [1, 2] } },
+      }),
+    );
     expect(result.data?.citations.map((item) => item.citationId)).toEqual([
       10, 20, 10,
     ]);

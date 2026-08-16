@@ -50,14 +50,20 @@ export default async function CompanyPage({ params }: PageProps) {
           <ul className="mt-4 space-y-3">
             {documents.map((document) => (
               <li key={document.documentId} className="rounded-md border border-zinc-200 p-3">
-                <a
-                  href={document.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-medium text-emerald-800"
-                >
-                  {document.title}
-                </a>
+                {document.url ? (
+                  <a
+                    href={document.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium text-emerald-800"
+                  >
+                    {document.title}
+                  </a>
+                ) : (
+                  <p className="text-sm font-medium text-zinc-950">
+                    {document.title}
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-zinc-500">
                   {document.documentType.typeName} - {document.publishedDate ?? "N/A"}
                 </p>

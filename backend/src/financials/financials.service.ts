@@ -9,6 +9,9 @@ export class FinancialsService {
     year?: string,
     quarter?: string,
   ): ApiResponse<FinancialSummary> {
+    // B0 preserves the V1 query contract; B4 will apply these filters to Prisma.
+    void year;
+    void quarter;
     const normalizedCompanyCode = companyCode.toUpperCase();
     const financial = mockFinancials[normalizedCompanyCode];
 

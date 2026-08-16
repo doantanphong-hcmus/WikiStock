@@ -19,9 +19,7 @@ describe('DocumentsController', () => {
     const response = await controller.getDocumentFile(8);
 
     expect(response).toBeInstanceOf(StreamableFile);
-    expect(response.getHeaders()).toMatchObject({
-      type: 'application/pdf',
-      disposition: expect.stringContaining('inline;'),
-    });
+    expect(response.getHeaders().type).toBe('application/pdf');
+    expect(response.getHeaders().disposition).toContain('inline;');
   });
 });
