@@ -59,6 +59,15 @@ class RagPipelineTests(unittest.TestCase):
         self.assertEqual(answer.evidence[0].chunk_id, 123)
         self.assertEqual(answer.evidence[0].document_id, 8)
 
+    def test_accepts_json_after_provider_preamble(self) -> None:
+        answer, _ = self.run_with(
+            'I will answer from the supplied evidence.\n'
+            '{"answer":"Revenue increased.","isConfident":true,'
+            '"usedChunkIds":[123],"limitations":null}'
+        )
+        self.assertTrue(answer.is_confident)
+        self.assertEqual(answer.evidence[0].chunk_id, 123)
+
     def test_rejects_malformed_json_and_missing_fields(self) -> None:
         for response in (
             "not json",
@@ -86,6 +95,14 @@ class RagPipelineTests(unittest.TestCase):
             self.run_with(
                 '{"answer":"Có","isConfident":true,'
                 '"usedChunkIds":[],"limitations":null}'
+            )
+        self.assertEqual(caught.exception.code, "AI_INVALID_RESPONSE")
+
+    def test_rejects_duplicate_evidence_ids(self) -> None:
+        with self.assertRaises(AiGenerationError) as caught:
+            self.run_with(
+                '{"answer":"Có","isConfident":true,'
+                '"usedChunkIds":[123,123],"limitations":null}'
             )
         self.assertEqual(caught.exception.code, "AI_INVALID_RESPONSE")
 

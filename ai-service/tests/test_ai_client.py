@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx
 
@@ -72,6 +74,47 @@ class AiGatewayClientTests(unittest.TestCase):
         with self.assertRaises(AiGenerationError) as caught:
             AiGatewayClient(AiSettings(provider="claude_proxy"))
         self.assertEqual(caught.exception.code, "AI_API_KEY_REQUIRED")
+
+    def test_supports_bearer_auth_and_gateway_custom_header(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(request.headers["authorization"], "Bearer test-token")
+            self.assertEqual(request.headers["x-zunef-client"], "claude-code")
+            self.assertNotIn("x-api-key", request.headers)
+            return httpx.Response(
+                200, json={"content": [{"type": "text", "text": "pong"}]}
+            )
+
+        client = AiGatewayClient(
+            AiSettings(
+                provider="gateway",
+                api_key="test-token",
+                auth_scheme="bearer",
+                custom_headers=(("X-ZUNEF-CLIENT", "claude-code"),),
+            ),
+            transport=httpx.MockTransport(handler),
+        )
+        self.assertEqual(client.generate("system", "question"), "pong")
+
+    def test_reads_anthropic_compatible_environment(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "ANTHROPIC_AUTH_TOKEN": "test-token",
+                "ANTHROPIC_BASE_URL": "https://gateway.example/v1/ai",
+                "ANTHROPIC_MODEL": "test-model",
+                "ANTHROPIC_CUSTOM_HEADERS": "X-ZUNEF-CLIENT: claude-code",
+            },
+            clear=True,
+        ):
+            settings = AiSettings.from_env()
+
+        self.assertEqual(settings.api_key, "test-token")
+        self.assertEqual(settings.auth_scheme, "bearer")
+        self.assertEqual(settings.base_url, "https://gateway.example/v1/ai")
+        self.assertEqual(settings.model, "test-model")
+        self.assertEqual(
+            settings.custom_headers, (("X-ZUNEF-CLIENT", "claude-code"),)
+        )
 
 
 if __name__ == "__main__":

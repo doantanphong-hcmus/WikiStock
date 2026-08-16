@@ -6,6 +6,8 @@ import time
 from datetime import date
 from typing import Callable, Sequence
 
+import psycopg
+
 from app.config import RetrievalSettings
 from app.database import RetrievalDatabase
 from app.embeddings import embed_texts, validate_embeddings
@@ -72,7 +74,14 @@ def retrieve_evidence(
         query, company_code, fiscal_year, document_types
     )
 
-    company_exists, known_types = database.filter_state(company_code, document_types)
+    try:
+        company_exists, known_types = database.filter_state(
+            company_code, document_types
+        )
+    except psycopg.Error as error:
+        raise RetrievalError(
+            "DATABASE_UNAVAILABLE", "RAG database is unavailable"
+        ) from error
     if not company_exists:
         raise RetrievalError("UNKNOWN_COMPANY_CODE", "Company code does not exist")
     unknown_types = set(document_types) - known_types
@@ -86,9 +95,14 @@ def retrieve_evidence(
         [query], settings.embedding_model, settings.embedding_batch_size
     )
     validate_embeddings(embeddings, 1, settings.embedding_dimensions)
-    candidates = database.retrieve_chunks(
-        embeddings[0], company_code, fiscal_year, document_types, settings.top_k
-    )
+    try:
+        candidates = database.retrieve_chunks(
+            embeddings[0], company_code, fiscal_year, document_types, settings.top_k
+        )
+    except psycopg.Error as error:
+        raise RetrievalError(
+            "DATABASE_UNAVAILABLE", "RAG database is unavailable"
+        ) from error
     evidence = tuple(
         chunk for chunk in candidates if chunk.similarity >= settings.min_similarity
     )

@@ -6,7 +6,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 import main
-from app.models import AiGenerationError, RetrievalResult
+from app.models import AiGenerationError, RetrievalError, RetrievalResult
 from tests.test_rag_pipeline import FakeClient, chunk
 
 
@@ -75,6 +75,30 @@ class AiApiTests(unittest.TestCase):
         self.assertFalse(response.json()['data']['isConfident'])
         self.assertEqual(response.json()['data']['evidence'], [])
         self.assertIn('AI_PROVIDER=demo', response.json()['data']['limitations'])
+
+    def test_database_failure_returns_sanitized_service_unavailable(self) -> None:
+        with (
+            patch.dict(
+                'os.environ',
+                {'AI_PROVIDER': 'claude_proxy', 'AI_API_KEY': 'test-key'},
+                clear=False,
+            ),
+            patch(
+                'main.generate_grounded_answer',
+                side_effect=RetrievalError(
+                    'DATABASE_UNAVAILABLE', 'RAG database is unavailable'
+                ),
+            ),
+        ):
+            response = self.client.post(
+                '/api/v1/internal/ai/ask',
+                json={'query': 'Question', 'companyCode': 'FPT'},
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json()['error']['code'], 'DATABASE_UNAVAILABLE'
+        )
 
 
 if __name__ == '__main__':
