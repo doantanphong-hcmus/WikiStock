@@ -1,301 +1,202 @@
 # WikiStock AI Service
 
-## AI gateway contract
+AI Service chịu trách nhiệm tiền kiểm PDF, chia đoạn theo trang, tạo embedding, lưu dữ liệu RAG, truy xuất bằng pgvector và sinh câu trả lời có bằng chứng. Backend là lớp duy nhất dựng citation công khai và URL mở PDF.
 
-The current gateway is Anthropic Messages-compatible. The API key must only exist in a local
-`.env` file or a secret store; never put it in a command, fixture, log, or Git.
+## Hai chế độ chạy
 
-| Item | Contract |
+| `AI_PROVIDER` | Hành vi |
 |---|---|
-| Base URL | `https://claude-api.zunef.com/v1/ai` |
-| List models | `GET /models` |
-| Create message | `POST /messages` |
-| Authentication | `x-api-key` with `AI_API_KEY`, or Bearer with `ANTHROPIC_AUTH_TOKEN` |
-| Request style | Anthropic Messages-compatible; live success verified |
-| API version header | `anthropic-version: 2023-06-01`; accepted by Zunef |
-| Verified model | `claude-sonnet-4-6` |
-| JSON mode | Not documented; do not assume native JSON mode |
-| Embeddings | Not documented; V1 continues to use local `BAAI/bge-m3` |
+| `demo` | Không gọi database hoặc provider; luôn trả `isConfident=false` và không có evidence |
+| `gateway` | Truy xuất tài liệu, gọi provider thật và kiểm tra chặt JSON cùng chunk ID |
 
-An unauthenticated `GET /models` was observed on 2026-08-03 to return HTTP 401
-with `tests/fixtures/claude_401.json`.
+Chế độ demo chỉ dùng để kiểm tra kết nối giữa các service. Không dùng kết quả demo để nghiệm thu RAG.
 
-A live `POST /messages` was successful on 2026-08-04. Its sanitized response is
-stored in `tests/fixtures/claude_success.json`. The response placed a
-`thinking` block before the `text` block, so consumers must select content by
-`type == "text"` rather than reading `content[0]`.
+## Chuẩn bị môi trường local
 
-### Live smoke test
+Yêu cầu:
 
-Run this in Codespaces. The silent prompt prevents the key from entering shell
-history. Use the exact model ID returned by `/models`.
+- Python 3.12 64-bit.
+- PostgreSQL có pgvector nếu chạy ngoài Docker.
+- Bộ PDF đã qua OCR tại `runtime/ocr/output` nếu muốn ingest đủ 12 tài liệu.
 
-```bash
-export AI_API_BASE_URL='https://claude-api.zunef.com/v1/ai'
-read -rsp 'AI API key: ' AI_API_KEY && echo
+Từ thư mục gốc repository:
 
-curl --silent --show-error --fail-with-body \
-  --connect-timeout 5 --max-time 45 \
-  -H "x-api-key: $AI_API_KEY" \
-  "$AI_API_BASE_URL/models"
-
-export AI_MODEL='claude-sonnet-4-6'
-AI_REQUEST_BODY=$(printf '%s' \
-  "{\"model\":\"$AI_MODEL\",\"max_tokens\":32,\"temperature\":0,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with only: pong\"}]}")
-curl --silent --show-error --fail-with-body \
-  --connect-timeout 5 --max-time 45 \
-  -H 'content-type: application/json' \
-  -H 'anthropic-version: 2023-06-01' \
-  -H "x-api-key: $AI_API_KEY" \
-  "$AI_API_BASE_URL/messages" \
-  --data "$AI_REQUEST_BODY"
-
-unset AI_API_KEY AI_REQUEST_BODY
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r ai-service\requirements.txt
+Copy-Item ai-service\.env.example ai-service\.env
 ```
 
-Before committing a captured response, remove dynamic IDs and inspect it for
-the API key or personal data. Do not manufacture 429 or 5xx fixtures: capture
-their real provider shape from documentation or an observed response.
+Khi chạy lệnh trong thư mục `ai-service`, dùng Python của virtual environment ở thư mục gốc:
 
-## PDF preflight
-
-R3 scans and validates PDF files without loading an embedding model, calling
-Claude, or writing to PostgreSQL.
-
-```bash
+```powershell
 cd ai-service
-python -m unittest discover -s tests
-
-SEED_DATA_PATH='../docs/Seed_Daa/Báo cáo tài chính' \
-  python -m app.ingestion scan --dry-run
+..\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-With Docker Compose, the seed directory is mounted read-only at
-`/data/seed_data`:
+## Biến môi trường chính
 
-```bash
-docker compose run --rm ai-service python -m app.ingestion scan --dry-run
-```
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `SEED_DATA_PATH` | `/data/seed_data` | Thư mục gốc chứa các thư mục mã cổ phiếu và PDF |
+| `DATABASE_URL` | Rỗng | PostgreSQL dùng cho ingest và retrieval |
+| `EMBEDDING_MODEL` | `BAAI/bge-m3` | Model embedding dùng thống nhất khi ingest và truy vấn |
+| `EMBEDDING_DIMENSIONS` | `1024` | Số chiều vector phải khớp schema pgvector |
+| `CHUNK_VERSION` | `v1-page-block-1800-200` | Phiên bản thuật toán chia đoạn |
+| `RETRIEVAL_TOP_K` | `5` | Số đoạn tối đa được truy xuất |
+| `RETRIEVAL_MIN_SIMILARITY` | `0.35` | Ngưỡng cosine similarity tối thiểu |
+| `AI_PROVIDER` | `demo` | Chọn `demo` hoặc `gateway` |
+| `AI_API_BASE_URL` | Gateway Zunef | Base URL tương thích Anthropic Messages |
+| `AI_API_KEY` | Rỗng | Client API key; không được commit |
+| `AI_MODEL` | `claude-sonnet-4-6` | Model provider |
+| `AI_CONNECT_TIMEOUT_SECONDS` | `5` | Thời gian chờ thiết lập kết nối |
+| `AI_READ_TIMEOUT_SECONDS` | `45` | Thời gian chờ provider trả nội dung |
+| `HF_HOME` | Theo Hugging Face | Nơi lưu cache model |
 
-## RAG ingestion persistence
+Các tên biến `CLAUDE_*` và `ANTHROPIC_*` cũ vẫn được chấp nhận để tương thích. Cấu hình mới nên dùng nhóm `AI_*` trung lập với nhà cung cấp.
 
-The non-dry-run command stores text PDFs in PostgreSQL with normalized
-`BAAI/bge-m3` vectors. A document is skipped when its checksum, embedding
-model, chunk version, and `ready` status already match. Image-only PDFs are
-reported as `needs_ocr` and remain untouched for the OCR task.
+## Hợp đồng gateway đã xác minh
 
-```bash
-docker compose run --rm ai-service python -m app.ingestion scan
-```
+Client API trực tiếp sử dụng:
 
-The first model download is cached in the `model_cache` Docker volume. To run
-the database integration gate against the Compose database:
+| Thành phần | Giá trị |
+|---|---|
+| Base URL | `https://claude.zunef.com/v1/ai` |
+| Danh sách model | `GET /models` |
+| Sinh nội dung | `POST /messages` |
+| Xác thực | `x-api-key` với `AI_API_KEY` |
+| Kiểu request | Anthropic Messages-compatible |
+| Embedding | Không dùng gateway; V1 dùng `BAAI/bge-m3` local |
 
-```bash
-docker compose run --rm \
-  -e TEST_DATABASE_URL='postgresql://app_user:app_password@postgres:5432/app_db' \
-  ai-service python -m unittest discover -s tests
-```
+Không nhầm Client API key với token dành riêng cho Claude Code. Không đưa key vào command, fixture, log hoặc Git. Nếu key từng xuất hiện trong nơi được chia sẻ, phải yêu cầu nhà cung cấp xoay khóa.
 
-Acceptance query:
+## Lệnh ingest
 
-```bash
-docker compose exec -T postgres psql -U app_user -d app_db -c "
-SELECT d.file_ref, d.ingestion_status, d.embedding_model, d.chunk_version,
-       count(DISTINCT ch.chunk_id) AS chunks,
-       count(DISTINCT ci.citation_id) AS citations
-FROM source_document d
-LEFT JOIN document_chunk ch ON ch.document_id = d.document_id
-LEFT JOIN citation ci ON ci.document_id = d.document_id
-GROUP BY d.document_id
-ORDER BY d.file_ref;"
-```
+Pipeline cố ý chỉ có một entrypoint `scan`. Không có CLI `add` hoặc `force` riêng.
 
-## OCR backfill (R4B)
-
-R4B reuses the ingestion command above. Point it at the searchable PDFs created
-by the OCR step; do not copy generated PDFs into Git-tracked seed data.
-
-On Windows without Docker, first run `npm run db:bootstrap` from `backend`
-against PostgreSQL with pgvector installed. Then run from `ai-service`:
+### Tiền kiểm, không ghi database
 
 ```powershell
-$env:SEED_DATA_PATH = (Resolve-Path '..\runtime\ocr\output')
-$env:DATABASE_URL = 'postgresql://app_user:app_password@localhost:5432/app_db'
-python -m app.ingestion scan
+..\.venv\Scripts\python.exe -m app.ingestion scan --dry-run
 ```
 
-With Docker Compose, run from the repository root:
+### Ingest hoặc tự động re-ingest
 
 ```powershell
-$env:RAG_SEED_DATA_PATH = './runtime/ocr/output'
-docker compose run --rm ai-service python -m app.ingestion scan
-Remove-Item Env:RAG_SEED_DATA_PATH
+..\.venv\Scripts\python.exe -m app.ingestion scan
 ```
 
-A complete first run discovers 12 PDFs and reports only `inserted` or
-`skipped` documents. A second run must report 12 `skipped` documents and leave
-database counts unchanged. The command exits non-zero if any PDF still needs
-OCR or fails ingestion.
+Hành vi:
 
-Verify the persisted batch:
+- PDF mới: `inserted`.
+- Cùng checksum, model và chunk version, trạng thái `ready`: `skipped`.
+- Cùng checksum nhưng đổi model/chunk version hoặc trạng thái chưa `ready`: `reingested`.
+- PDF phần lớn là ảnh và thiếu text layer: `needs_ocr`, command trả mã lỗi khác 0.
+- Lỗi khác: `failed`, command trả mã lỗi khác 0.
 
-```sql
-SELECT d.file_ref, d.ingestion_status, d.fiscal_year, d.fiscal_quarter,
-       d.embedding_model, d.chunk_version,
-       count(DISTINCT ch.chunk_id) AS chunks,
-       count(DISTINCT ci.citation_id) AS citations
-FROM source_document d
-JOIN data_source s ON s.source_id = d.source_id
-LEFT JOIN document_chunk ch ON ch.document_id = d.document_id
-LEFT JOIN citation ci ON ci.document_id = d.document_id
-WHERE s.source_name = 'WikiStock seed PDF'
-GROUP BY d.document_id
-ORDER BY d.file_ref;
+Muốn thêm tài liệu, đặt PDF vào `<SEED_DATA_PATH>/<MÃ_CỔ_PHIẾU>/` rồi chạy dry-run và scan. Tên file nên chứa quý và năm theo dạng `Q4_2025` hoặc `Quy 4 nam 2025`.
 
-SELECT count(DISTINCT d.document_id) AS documents,
-       count(DISTINCT d.document_id) FILTER (
-           WHERE d.ingestion_status = 'ready'
-       ) AS ready,
-       count(DISTINCT d.document_id) - count(DISTINCT d.checksum)
-           AS duplicate_checksums,
-       count(*) FILTER (
-           WHERE ch.embedding IS NULL OR vector_dims(ch.embedding) <> 1024
-       ) AS invalid_embeddings
-FROM source_document d
-JOIN data_source s ON s.source_id = d.source_id
-LEFT JOIN document_chunk ch ON ch.document_id = d.document_id
-WHERE s.source_name = 'WikiStock seed PDF';
+## Cache model BGE-M3
 
-SELECT count(*) AS orphan_citations
-FROM citation ci
-LEFT JOIN document_chunk ch ON ch.chunk_id = ci.chunk_id
-WHERE ch.chunk_id IS NULL;
+Docker Compose lưu cache trong volume `model_cache`. Tải trước model trước buổi demo:
+
+```powershell
+docker compose run --rm ai-service python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
 ```
 
-The expected invariant values are `documents = 12`, `ready = 12`,
-`duplicate_checksums = 0`, `invalid_embeddings = 0`, and
-`orphan_citations = 0`. Each document must also have equal, non-zero chunk and
-citation counts.
+Chạy trực tiếp trên máy host:
 
-## RAG retrieval (R5)
-
-`app.retrieval.retrieve_evidence()` embeds one normalized question with the
-same `BAAI/bge-m3` model used during ingestion, then runs an exact pgvector
-cosine search. Company, fiscal year, document type, `ready` status, and
-non-null embedding filters are applied in SQL before `LIMIT`.
-
-```python
-from app.retrieval import retrieve_evidence
-
-result = retrieve_evidence(
-    "Doanh thu quý 1 năm 2026 của FPT là bao nhiêu?",
-    "FPT",
-    fiscal_year=2026,
-    document_types=("financial_statement",),
-)
-
-print(result.is_confident)
-for chunk in result.evidence:
-    print(chunk.chunk_id, chunk.document_id, chunk.page_number, chunk.similarity)
+```powershell
+$env:HF_HOME = (Resolve-Path '..\runtime').Path + '\model-cache'
+..\.venv\Scripts\python.exe -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
 ```
 
-The default result contains at most five chunks with cosine similarity at or
-above `0.35`, sorted from highest to lowest. If none passes the threshold,
-`is_confident` is false and `evidence` is empty. Retrieval has no provider
-dependency, so this path cannot call the language model; R6 owns generation.
+Sau khi tải, có thể đặt `HF_HUB_OFFLINE=1` để chứng minh model được đọc từ cache. Nếu model chưa có trong cache, chế độ offline sẽ thất bại với `EMBEDDING_FAILED`.
 
-## R6 grounded answer generation
+## Retrieval và sinh câu trả lời
 
-Set `AI_PROVIDER=gateway` to enable retrieval followed by AI generation. The
-default `AI_PROVIDER=demo` is deliberately non-confident and never calls the
-database or gateway. A gateway failure is returned as a stable error; it is
-never hidden by a demo fallback.
+Endpoint nội bộ:
 
-The model receives canonical chunk headers and untrusted source text. Its JSON
-output is strictly validated, including the rule that every selected chunk ID
-must belong to the retrieved context. The internal endpoint returns only
-`chunkId` and `documentId`; Backend resolves public citation metadata from the
-database.
-
-Run the normal suite without a provider key:
-
-```bash
-python -m unittest discover -s tests -v
+```text
+POST /api/v1/internal/ai/ask
 ```
 
-Live smoke tests are isolated behind an explicit marker and read the key only
-from the process environment:
+Request mẫu:
 
-```bash
-export RUN_LIVE_AI_TESTS=1
-read -rsp 'AI API key: ' AI_API_KEY && echo
-python -m unittest tests.test_live_ai -v
-unset RUN_LIVE_AI_TESTS AI_API_KEY
+```json
+{
+  "query": "Doanh thu FPT quý 1 năm 2026 có điểm gì đáng chú ý?",
+  "companyCode": "FPT",
+  "filters": {
+    "year": 2026,
+    "documentTypes": ["financial_statement"]
+  }
+}
 ```
 
-Legacy `CLAUDE_*` and Anthropic-compatible `ANTHROPIC_*` environment names
-remain accepted. New application configuration should prefer provider-neutral
-`AI_*` names. `ANTHROPIC_CUSTOM_HEADERS` and `AI_CUSTOM_HEADERS` accept one
-`Name: value` header per line.
+AI Service chỉ trả identity nội bộ:
 
-| Variable | Default |
-|---|---:|
-| `RETRIEVAL_TOP_K` | `5` |
-| `RETRIEVAL_MIN_SIMILARITY` | `0.35` |
-
-Run the filter-isolation and exact-search integration gate against PostgreSQL
-with pgvector:
-
-```bash
-TEST_DATABASE_URL='postgresql://app_user:app_password@localhost:5432/app_db' \
-  python -m unittest tests.test_retrieval -v
+```json
+{
+  "answer": "...",
+  "isConfident": true,
+  "evidence": [{ "chunkId": 123, "documentId": 8 }],
+  "limitations": null
+}
 ```
 
-The integration test covers company, year, document type, ingestion status,
-top-k ordering, and a 30-query p95 ceiling of 300 ms. R5 deliberately uses an
-exact scan: the seed set has only 930 chunks, so HNSW, hybrid search, and a
-reranker remain out of scope until measurements justify them.
+Model không được tạo `sourceUrl`, tiêu đề tài liệu hoặc citation ID. Backend tra cứu các trường này từ database và từ chối evidence không thuộc đúng tài liệu `ready` của doanh nghiệp.
 
-Local acceptance on 2026-08-15 used all 930 OCR-backed chunks with PostgreSQL
-18 and pgvector 0.8.6. An FPT Q1/2026 revenue question returned five FPT 2026
-chunks; the two highest-ranked chunks were both on page 8 with similarities
-`0.7364` and `0.7164`. Across 100 exact SQL searches, p95 was `141.10 ms`.
+## Kiểm thử
 
-## R8 evaluation
+### Bộ test mặc định, không cần API key
 
-The committed fixture contains 20 questions grounded manually against the 12
-OCR-backed PDFs. Run retrieval-only evaluation without an AI credential:
-
-```bash
-python -m app.evaluation
+```powershell
+..\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Run the deterministic fake-provider gate to verify evidence selection,
-citation precision, and abstention without Internet access:
+### Test tích hợp database
 
-```bash
-python -m app.evaluation \
-  --fake-provider \
-  --output reports/rag_evaluation_fake_provider
+Chỉ dùng database dành riêng cho test vì test có tạo và xóa dữ liệu:
+
+```powershell
+$env:TEST_DATABASE_URL = 'postgresql://app_user:app_password@localhost:5432/wikistock_test'
+..\.venv\Scripts\python.exe -m unittest discover -s tests -v
+Remove-Item Env:TEST_DATABASE_URL
 ```
 
-The live-provider mode is manual and never runs in the default test suite:
+### Smoke test provider thật
 
-```bash
-python -m app.evaluation --live-provider --output reports/rag_evaluation_live
+```powershell
+$env:RUN_LIVE_AI_TESTS = '1'
+$env:AI_PROVIDER = 'gateway'
+# Nạp AI_API_KEY bằng kênh bí mật của môi trường, không đặt trực tiếp vào script.
+..\.venv\Scripts\python.exe -m unittest tests.test_live_ai -v
+Remove-Item Env:RUN_LIVE_AI_TESTS
 ```
 
-Current offline baseline on the 930 real chunks:
+## Đánh giá RAG
 
-| Metric | Result | Gate |
-|---|---:|---:|
-| Recall@5 | 0.8125 | >= 0.80 |
-| Citation precision | 1.00 | = 1.00 |
-| Unsupported abstention accuracy | 1.00 | = 1.00 |
-| Cold start | 5048.42 ms | Recorded separately |
-| Retrieval p95 | 227.83 ms | <= 300 ms |
+```powershell
+# Chỉ retrieval
+..\.venv\Scripts\python.exe -m app.evaluation
 
-The citation and abstention figures use the deterministic fake provider. They
-prove the offline evidence-validation path; they are not presented as a live
-model quality score.
+# Provider giả lập deterministic, không dùng Internet/API credit
+..\.venv\Scripts\python.exe -m app.evaluation `
+  --fake-provider `
+  --output reports\rag_evaluation_fake_provider
+
+# Provider thật, có dùng API credit
+..\.venv\Scripts\python.exe -m app.evaluation `
+  --live-provider `
+  --output reports\rag_evaluation_live
+```
+
+Kết quả fake-provider chỉ chứng minh đường kiểm tra evidence hoạt động; không đại diện cho chất lượng model thật. Kết quả live gần nhất và rủi ro còn mở được ghi tại `reports/rag_evaluation_live.md` và `../docs/R8_POST_EVALUATION_RISK.md`.
+
+## Tài liệu liên quan
+
+- [Runbook vận hành RAG](../docs/RAG_OPERATIONS_RUNBOOK.md)
+- [Giới hạn và cách xử lý lỗi](../docs/RAG_KNOWN_LIMITATIONS.md)
+- [API contract](../docs/API_CONTRACT.md)
+- [Tiền xử lý OCR](../docs/OCR_PREPROCESSING.md)
