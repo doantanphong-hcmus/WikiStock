@@ -5,7 +5,7 @@ Tài liệu này quy định API contract giữa các service trong hệ thống
 Nguyên tắc hiện tại:
 
 - JSON response dùng `camelCase`.
-- Response shape đi gần `schema.sql` mới.
+- Response shape đi gần schema Prisma và migration hiện tại.
 - `ticker` là mã cổ phiếu hiển thị cho người dùng.
 - Các object danh mục như `exchange`, `industry`, `metric`, `source`, `documentType` được trả về dưới dạng object lồng nhau.
 - API vẫn có thể dùng route param tên `companyCode` trong V1 để giữ endpoint cũ, nhưng dữ liệu trả ra ưu tiên `ticker`, `companyId`, `companyName`.

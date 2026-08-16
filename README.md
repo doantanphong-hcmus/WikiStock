@@ -50,6 +50,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Compose waits for PostgreSQL, applies `backend/prisma/migrations`, seeds the V1
+lookups, verifies pgvector, and only then starts Backend and AI Service.
+
 ```bash
 docker compose down
 ```

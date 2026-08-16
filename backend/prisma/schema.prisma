@@ -175,7 +175,8 @@ model DocumentChunk {
   content     String    @db.Text
   charCount   Int       @map("char_count")
   contentHash String    @map("content_hash") @db.VarChar(64)
-  // Note: embedding storage is handled separately by pgvector in ai-service
+  // Prisma keeps the column in schema history; ai-service reads/writes it with raw SQL.
+  embedding   Unsupported("vector")?
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   document SourceDocument @relation(fields: [documentId], references: [documentId], onDelete: Cascade)

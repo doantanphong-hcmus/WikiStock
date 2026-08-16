@@ -14,6 +14,7 @@ services:
       DB_USER: app_user
       DB_PASSWORD: app_password
       DB_NAME: app_db
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
       REDIS_HOST: redis
       REDIS_PORT: 6379
       AI_SERVICE_URL: http://ai-service:8000
@@ -28,6 +29,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
       ai-service:
@@ -35,7 +38,23 @@ services:
     networks:
       - app_network
 
-  # 2. Frontend
+  # 2. Database migration and lookup seed (runs once)
+  db-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: db_migrate
+    restart: "no"
+    command: ["npm", "run", "db:bootstrap"]
+    environment:
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  # 3. Frontend
   frontend:
     build:
       context: ./frontend
@@ -51,7 +70,7 @@ services:
     networks:
       - app_network
 
-  # 3. AI service
+  # 4. AI service
   ai-service:
     build:
       context: ./ai-service
@@ -85,12 +104,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
     networks:
       - app_network
 
-  # 4. PostgreSQL
+  # 5. PostgreSQL
   postgres:
     image: pgvector/pgvector:pg16
     container_name: postgres_db
@@ -103,7 +124,6 @@ services:
       - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app_user -d app_db"]
       interval: 5s
@@ -113,7 +133,7 @@ services:
     networks:
       - app_network
 
-  # 5. Redis
+  # 6. Redis
   redis:
     image: redis:7-alpine
     container_name: redis_cache

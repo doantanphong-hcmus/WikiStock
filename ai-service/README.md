@@ -116,8 +116,8 @@ ORDER BY d.file_ref;"
 R4B reuses the ingestion command above. Point it at the searchable PDFs created
 by the OCR step; do not copy generated PDFs into Git-tracked seed data.
 
-On Windows without Docker, run from `ai-service` after starting a PostgreSQL
-database that has `schema.sql`, `seed.sql`, and pgvector installed:
+On Windows without Docker, first run `npm run db:bootstrap` from `backend`
+against PostgreSQL with pgvector installed. Then run from `ai-service`:
 
 ```powershell
 $env:SEED_DATA_PATH = (Resolve-Path '..\runtime\ocr\output')

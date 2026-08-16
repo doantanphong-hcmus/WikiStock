@@ -2,20 +2,52 @@
 
 NestJS API gateway for the WikiStock MVP skeleton.
 
+## Database ownership
+
+`backend/prisma/migrations` is the only executable history for creating and
+upgrading the database. The crawler and AI service consume this schema; they do
+not create their own tables.
+
+PostgreSQL must have the pgvector extension installed on the server. The
+baseline migration enables it and creates `document_chunk.embedding` as
+`vector(1024)`.
+
 ## Local Setup
 
+Create `backend/.env` from `backend/.env.example`, then run:
+
 ```bash
-npm install
+npm ci
+npm exec prisma generate
+npm run db:bootstrap
 npm run start:dev
 ```
 
-Create `.env` from `.env.example` when running locally.
+`db:bootstrap` applies pending migrations, seeds stable V1 lookups, and checks
+pgvector, core tables, the embedding dimension, and the chunk uniqueness rule.
+It is safe to run again: applied migrations are skipped and seed records are
+upserted.
 
-Generate the Prisma client and apply the schema to a new local database:
+Individual commands are also available:
 
 ```bash
-npm exec prisma generate
-npm exec prisma db push
+npm run db:migrate
+npm run db:seed
+npm run db:check
+```
+
+Do not use `prisma db push` for WikiStock databases. It does not own the custom
+pgvector column or the database-only validation constraints.
+
+### Existing database created from the old `schema.sql`
+
+Do not run the baseline migration directly against a populated legacy database.
+Back it up, run `npm run db:check`, compare it with the baseline migration, and
+only then mark `20260816000000_baseline` as applied with `prisma migrate resolve`.
+For disposable local data, creating a fresh database is safer.
+
+```bash
+npm exec prisma migrate resolve --applied 20260816000000_baseline
 ```
 
 Set `JWT_SECRET` to at least 32 random characters. Create the first Admin after

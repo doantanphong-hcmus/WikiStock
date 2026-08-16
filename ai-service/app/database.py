@@ -53,7 +53,7 @@ class IngestionDatabase:
             if not company or not source or not document_type:
                 raise IngestionError(
                     "REFERENCE_DATA_MISSING",
-                    "Run seed.sql before ingestion; company/source/document type is missing",
+                    "Run backend `npm run db:seed` before ingestion; company/source/document type is missing",
                 )
             row = connection.execute(
                 """
