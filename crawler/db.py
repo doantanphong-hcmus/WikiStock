@@ -42,11 +42,11 @@ def verify_schema(cursor):
         raise RuntimeError("Bảng metric chưa được seed. Hãy chạy Backend db:bootstrap trước.")
 
 
-def get_source_id(cursor):
-    cursor.execute("SELECT source_id FROM data_source WHERE source_name = %s", (VNSTOCK_SOURCE_NAME,))
+def get_source_id(cursor, source_name=VNSTOCK_SOURCE_NAME):
+    cursor.execute("SELECT source_id FROM data_source WHERE source_name = %s", (source_name,))
     row = cursor.fetchone()
     if row is None:
-        raise RuntimeError("Không tìm thấy nguồn vnstock trong data_source.")
+        raise RuntimeError(f"Không tìm thấy nguồn '{source_name}' trong data_source.")
     return row[0]
 
 
@@ -54,6 +54,14 @@ def get_company_id(cursor, ticker):
     cursor.execute("SELECT company_id FROM company WHERE ticker = %s", (ticker,))
     row = cursor.fetchone()
     return row[0] if row else None
+
+
+def get_company_ids(cursor, tickers):
+    cursor.execute(
+        "SELECT ticker, company_id FROM company WHERE ticker = ANY(%s)",
+        (list(tickers),),
+    )
+    return dict(cursor.fetchall())
 
 
 def upsert_exchange(cursor, code, name):
@@ -116,14 +124,54 @@ def upsert_company(cursor, profile, exchange_id, industry_id):
     return cursor.fetchone()[0]
 
 
+def upsert_news_article(cursor, source_id, article):
+    """Upsert theo URL và không ghi đè metadata tốt bằng giá trị rỗng."""
+    cursor.execute(
+        """
+        INSERT INTO news_article (source_id, title, url, published_at, summary)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (url) DO UPDATE SET
+            source_id = EXCLUDED.source_id,
+            title = EXCLUDED.title,
+            published_at = COALESCE(EXCLUDED.published_at, news_article.published_at),
+            summary = COALESCE(EXCLUDED.summary, news_article.summary)
+        RETURNING article_id
+        """,
+        (
+            source_id,
+            article["title"],
+            article["url"],
+            article["published_at"],
+            article["summary"],
+        ),
+    )
+    return cursor.fetchone()[0]
+
+
+def upsert_news_company(cursor, article_id, company_id, relevance_score):
+    cursor.execute(
+        """
+        INSERT INTO news_article_company (article_id, company_id, relevance_score)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (article_id, company_id) DO UPDATE SET
+            relevance_score = EXCLUDED.relevance_score
+        """,
+        (article_id, company_id, relevance_score),
+    )
+
+
+def insert_ingestion_log(cursor, source_id, status, records_fetched, error_message=None):
+    cursor.execute(
+        """
+        INSERT INTO data_ingestion_log (source_id, status, records_fetched, error_message)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (source_id, status, records_fetched, error_message),
+    )
+
+
 def write_ingestion_log(status, records_fetched, error_message=None):
     """Ghi kết quả của một lần chạy thật vào bảng theo dõi ingestion."""
     with get_connection() as connection, connection.cursor() as cursor:
         source_id = get_source_id(cursor)
-        cursor.execute(
-            """
-            INSERT INTO data_ingestion_log (source_id, status, records_fetched, error_message)
-            VALUES (%s, %s, %s, %s)
-            """,
-            (source_id, status, records_fetched, error_message),
-        )
+        insert_ingestion_log(cursor, source_id, status, records_fetched, error_message)
