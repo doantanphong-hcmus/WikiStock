@@ -67,6 +67,45 @@ Bộ test ánh xạ không gọi VNStock và không cần database:
 
 Fixture nhỏ trong `tests/fixtures/` kiểm tra các quy tắc dễ hỏng: ánh xạ hồ sơ, chọn bốn quý gần nhất, loại `NULL`/`NaN`/vô cực, chuẩn hóa phần trăm và xác thực URL tin tức.
 
+## Nghiệm thu RSS với PostgreSQL
+
+Integration test chỉ chạy khi có `TEST_DATABASE_URL`. Database này phải có hậu tố `_test` và đã được Backend bootstrap; test từ chối chạy trên database phát triển để tránh sửa nhầm dữ liệu.
+
+```powershell
+cd backend
+$env:DATABASE_URL='postgresql://wikistock_test_user:wikistock_test_password@localhost:5432/wikistock_test'
+npm run db:bootstrap
+
+cd ..\crawler
+$env:TEST_DATABASE_URL='postgresql://wikistock_test_user:wikistock_test_password@localhost:5432/wikistock_test'
+.\.venv\Scripts\python.exe -m unittest tests.test_rss_postgres -v
+```
+
+Test nạp cùng fixture ba lần để xác nhận không tăng bài hoặc liên kết trùng, metadata được cập nhật và mỗi nguồn có một ingestion log cho mỗi lượt.
+
+## Kiểm tra RSS thật và review thủ công
+
+Live smoke bị tắt mặc định để CI không phụ thuộc mạng. Chỉ bật rõ ràng khi cần kiểm tra các feed đang hoạt động:
+
+```powershell
+$env:RUN_LIVE_RSS_TESTS='1'
+.\.venv\Scripts\python.exe -m unittest tests.test_live_rss -v
+```
+
+Tạo phiếu CSV gồm tối đa 20 bài được matcher chấp nhận từ mỗi nguồn:
+
+```powershell
+.\.venv\Scripts\python.exe rss_review.py
+```
+
+BA điền `is_correct` bằng `true` hoặc `false` và ghi lý do tại `review_reason`, sau đó chấm gate precision 98%:
+
+```powershell
+.\.venv\Scripts\python.exe rss_review.py --score
+```
+
+Không tuyên bố đạt precision 98% khi phiếu chưa được người review độc lập hoàn thành.
+
 ## Cấu trúc
 
 - `main.py`: CLI và tổng kết lần chạy.
@@ -75,6 +114,7 @@ Fixture nhỏ trong `tests/fixtures/` kiểm tra các quy tắc dễ hỏng: án
 - `crawl_news.py`: điều phối, đối chiếu và lưu tin RSS theo từng nguồn.
 - `rss_client.py`, `rss_parser.py`: tải và chuẩn hóa RSS.
 - `news_matcher.py`, `company_aliases.py`: nhận diện doanh nghiệp theo luật đã duyệt.
+- `rss_review.py`: tạo và chấm phiếu review thủ công cho matcher.
 - `mappings.py`: quy tắc chuẩn hóa có thể test offline.
 - `db.py`: kết nối, kiểm tra schema và các lệnh upsert.
 - `check_requirements.py`: kiểm tra Python, thư viện và database.
