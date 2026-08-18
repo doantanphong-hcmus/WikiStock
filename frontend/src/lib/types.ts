@@ -80,7 +80,7 @@ export interface DataSourceSummary {
   sourceId: number;
   sourceName: string;
   sourceType: string;
-  reliabilityTier: number;
+  reliabilityTier: number | null;
   costTier: string;
   accessUrl: string | null;
 }
