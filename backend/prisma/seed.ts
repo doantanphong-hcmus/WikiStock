@@ -30,6 +30,15 @@ const metrics = [
   ['ASSET_TURNOVER', 'Vòng quay tài sản', 'lần', 'ratio'],
 ] as const;
 
+// Chỉ seed danh mục nguồn chính thức. Các feed cụ thể do crawler quản lý.
+const rssNewsSources = [
+  ['VnExpress RSS', 'https://vnexpress.net/rss'],
+  ['Thanh Nien RSS', 'https://thanhnien.vn/rss.html'],
+  ['Tuoi Tre RSS', 'https://tuoitre.vn/nld/rss.htm'],
+  ['CafeBiz RSS', 'https://cafebiz.vn/index.rss'],
+  ['VnEconomy RSS', 'https://vneconomy.vn/rss.html'],
+] as const;
+
 async function main() {
   for (const roleName of ['admin', 'user']) {
     await prisma.userRole.upsert({
@@ -105,6 +114,15 @@ async function main() {
     });
   }
 
+  for (const [sourceName, accessUrl] of rssNewsSources) {
+    await prisma.dataSource.upsert({
+      where: { sourceName },
+      // Không cập nhật reliabilityTier để giữ đánh giá được team bổ sung sau này.
+      update: { sourceType: 'news', costTier: 'free', accessUrl },
+      create: { sourceName, sourceType: 'news', costTier: 'free', accessUrl },
+    });
+  }
+
   for (const typeName of ['financial_statement', 'annual_report']) {
     await prisma.documentType.upsert({
       where: { typeName },
@@ -121,7 +139,9 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${metrics.length} financial metrics and V1 lookups.`);
+  console.log(
+    `Seeded ${metrics.length} financial metrics, ${rssNewsSources.length} RSS news sources and V1 lookups.`,
+  );
 }
 
 main()

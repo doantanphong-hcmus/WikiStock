@@ -34,7 +34,7 @@ model DataSource {
   sourceId        Int     @id @default(autoincrement()) @map("source_id")
   sourceName      String  @unique @map("source_name") @db.VarChar(100)
   sourceType      String  @map("source_type") @db.VarChar(30)
-  reliabilityTier Int     @map("reliability_tier") @db.SmallInt
+  reliabilityTier Int?    @map("reliability_tier") @db.SmallInt
   costTier        String  @map("cost_tier") @db.VarChar(20)
   accessUrl       String? @map("access_url") @db.Text
 
