@@ -10,7 +10,8 @@ from crawl_financial import crawl_financial
 from crawl_news import crawl_news
 from db import get_company_id, get_connection, verify_schema, write_ingestion_log
 
-STAGES = ("company", "financial", "news")
+CORE_STAGES = ("company", "financial")
+STAGES = (*CORE_STAGES, "news")
 
 
 def _existing_company_id(ticker):
@@ -19,7 +20,9 @@ def _existing_company_id(ticker):
 
 
 def run_ticker(ticker, selected_stage):
-    stages = STAGES if selected_stage == "all" else (selected_stage,)
+    if selected_stage == "news":
+        raise ValueError("Tin RSS phải chạy theo batch, không chạy qua run_ticker")
+    stages = CORE_STAGES if selected_stage == "all" else (selected_stage,)
     result = {"ticker": ticker, "status": "success", "records": 0, "stages": {}, "errors": []}
     company_id = _existing_company_id(ticker)
 
@@ -28,14 +31,10 @@ def run_ticker(ticker, selected_stage):
             if stage == "company":
                 stage_result = crawl_company(ticker)
                 company_id = stage_result["company_id"]
-            else:
+            elif stage == "financial":
                 if company_id is None:
                     raise RuntimeError("Chưa có doanh nghiệp trong DB; hãy chạy bước company trước")
-                stage_result = (
-                    crawl_financial(ticker, company_id)
-                    if stage == "financial"
-                    else crawl_news(ticker, company_id)
-                )
+                stage_result = crawl_financial(ticker, company_id)
             result["stages"][stage] = stage_result
             result["records"] += stage_result.get("records", 0)
         except Exception as error:
@@ -49,7 +48,7 @@ def run_ticker(ticker, selected_stage):
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Nạp dữ liệu VNStock vào WikiStock")
+    parser = argparse.ArgumentParser(description="Nạp dữ liệu doanh nghiệp, tài chính và RSS")
     parser.add_argument("--ticker", type=str.upper, help="Chỉ chạy một mã, ví dụ FPT")
     parser.add_argument(
         "--stage", choices=("all", *STAGES), default="all", help="Chỉ chạy một công đoạn"
@@ -69,25 +68,64 @@ def main(argv=None):
         return 2
 
     results = []
-    for ticker in tickers:
-        print(f"\n[{ticker}] Bắt đầu công đoạn: {args.stage}")
-        result = run_ticker(ticker, args.stage)
-        results.append(result)
-        print(f"[{ticker}] {result['status']} - {result['records']} bản ghi")
-        for error in result["errors"]:
-            print(f"  Lỗi: {error}")
+    component_statuses = []
+    if args.stage != "news":
+        for ticker in tickers:
+            print(f"\n[{ticker}] Bắt đầu công đoạn: {args.stage}")
+            result = run_ticker(ticker, args.stage)
+            results.append(result)
+            print(f"[{ticker}] {result['status']} - {result['records']} bản ghi")
+            for error in result["errors"]:
+                print(f"  Lỗi: {error}")
 
+        failed = sum(result["status"] == "failed" for result in results)
+        core_records = sum(result["records"] for result in results)
+        core_errors = [
+            f"{result['ticker']}: {error}"
+            for result in results
+            for error in result["errors"]
+        ]
+        core_status = (
+            "success"
+            if not core_errors
+            else "failed"
+            if failed == len(results)
+            else "partial"
+        )
+        component_statuses.append(core_status)
+        try:
+            write_ingestion_log(core_status, core_records, "; ".join(core_errors) or None)
+        except Exception as error:
+            print(f"Không ghi được data_ingestion_log: {error}", file=sys.stderr)
+            return 2
+
+    news_result = None
+    if args.stage in {"all", "news"}:
+        print("\n[RSS] Tải mỗi feed một lần và đối chiếu doanh nghiệp")
+        try:
+            news_result = crawl_news(tickers)
+        except Exception as error:
+            news_result = {
+                "status": "failed",
+                "tickers": list(tickers),
+                "records": 0,
+                "sources": [],
+                "error": str(error),
+            }
+        component_statuses.append(news_result["status"])
+
+    status = (
+        "success"
+        if all(item == "success" for item in component_statuses)
+        else "failed"
+        if all(item == "failed" for item in component_statuses)
+        else "partial"
+    )
     succeeded = sum(result["status"] == "success" for result in results)
     failed = sum(result["status"] == "failed" for result in results)
-    records = sum(result["records"] for result in results)
-    errors = [f"{result['ticker']}: {error}" for result in results for error in result["errors"]]
-    status = "success" if not errors else ("failed" if failed == len(results) else "partial")
-
-    try:
-        write_ingestion_log(status, records, "; ".join(errors) or None)
-    except Exception as error:
-        print(f"Không ghi được data_ingestion_log: {error}", file=sys.stderr)
-        return 2
+    records = sum(result["records"] for result in results) + (
+        news_result["records"] if news_result else 0
+    )
 
     summary = {
         "status": status,
@@ -96,6 +134,7 @@ def main(argv=None):
         "failed": failed,
         "records": records,
         "results": results,
+        "news": news_result,
     }
     print("\nTỔNG KẾT")
     print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
