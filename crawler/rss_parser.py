@@ -20,6 +20,9 @@ TRACKING_PARAMETERS = {"utm_source", "utm_medium", "utm_campaign"}
 class ParseResult:
     articles: tuple[dict, ...]
     skipped_items: int
+    fetched_items: int
+    invalid_title: int
+    invalid_url: int
 
 
 class _TextExtractor(HTMLParser):
@@ -96,10 +99,15 @@ def parse_feed(payload, feed: RssFeed):
     root = ET.fromstring(payload)
     articles = []
     skipped_items = 0
+    invalid_title = 0
+    invalid_url = 0
+    items = root.findall("./channel/item")
 
-    for item in root.findall("./channel/item"):
+    for item in items:
         title = clean_text(item.findtext("title"))
         url = normalize_url(item.findtext("link"), feed.allowed_hostnames)
+        invalid_title += not bool(title)
+        invalid_url += not bool(url)
         if not title or not url:
             skipped_items += 1
             continue
@@ -114,4 +122,6 @@ def parse_feed(payload, feed: RssFeed):
             }
         )
 
-    return ParseResult(tuple(articles), skipped_items)
+    return ParseResult(
+        tuple(articles), skipped_items, len(items), invalid_title, invalid_url
+    )
