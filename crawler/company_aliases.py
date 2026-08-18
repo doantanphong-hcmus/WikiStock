@@ -11,7 +11,7 @@ COMPANY_ALIASES = {
     "VCB": ("Vietcombank", "Ngân hàng Ngoại thương"),
     "VCG": ("Vinaconex", "Tổng công ty Vinaconex"),
     "VIC": ("Vingroup", "Tập đoàn Vingroup"),
-    "VNM": ("Vinamilk", "Sữa Việt Nam"),
+    "VNM": ("Vinamilk", "Công ty Sữa Việt Nam"),
 }
 
 # Từ "mã" đứng riêng chưa đủ mạnh vì có thể là mã màu, mã thiết bị hoặc mã tệp.

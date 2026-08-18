@@ -269,6 +269,13 @@
       "reason": "Tên doanh nghiệp nằm trong tóm tắt"
     },
     {
+      "id": "vnm-generic-dairy-phrase",
+      "title": "Nuôi bò sữa Việt Nam: Từ thách thức đến tự chủ quốc gia",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Cụm sữa Việt Nam nói về ngành sữa, không đủ để xác định Vinamilk"
+    },
+    {
       "id": "vnm-ticker-context",
       "title": "Mã VNM tăng sau báo cáo doanh thu",
       "summary": null,
