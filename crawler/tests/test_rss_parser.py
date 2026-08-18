@@ -71,6 +71,9 @@ class RssParserTests(unittest.TestCase):
         result = parse_feed(payload, feed)
 
         self.assertEqual(result.skipped_items, 2)
+        self.assertEqual(result.fetched_items, 3)
+        self.assertEqual(result.invalid_title, 1)
+        self.assertEqual(result.invalid_url, 1)
         self.assertEqual(result.articles[0]["title"], "Tin & moi")
         self.assertEqual(result.articles[0]["summary"], "Tom tat")
         self.assertEqual(result.articles[0]["url"], "https://vnexpress.net/bai-viet?id=1")
