@@ -1,6 +1,7 @@
 """Tải, đối chiếu và lưu tin RSS theo từng nguồn độc lập."""
 
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 from db import (
     get_company_ids,
@@ -24,11 +25,13 @@ def _new_summary(source_name):
         "parsed": 0,
         "invalid_title": 0,
         "invalid_url": 0,
+        "skipped_items": 0,
         "unmatched": 0,
         "matched_articles": 0,
         "company_links": 0,
         "inserted_or_updated": 0,
         "errors": [],
+        "warnings": [],
     }
 
 
@@ -40,11 +43,12 @@ def _source_status(summary, successful_feeds):
     return "success"
 
 
-def crawl_news(tickers, feeds=None, fetcher=None):
+def crawl_news(tickers, feeds=None, fetcher=None, now=None):
     """Mỗi feed chỉ tải một lần rồi mới đối chiếu với các mã được yêu cầu."""
     tickers = tuple(dict.fromkeys(ticker.upper() for ticker in tickers))
     feeds = tuple(feeds if feeds is not None else load_enabled_feeds())
     fetcher = fetcher or fetch_feed
+    now = now or datetime.now(timezone.utc)
 
     with get_connection() as connection, connection.cursor() as cursor:
         company_ids = get_company_ids(cursor, tickers)
@@ -74,9 +78,29 @@ def crawl_news(tickers, feeds=None, fetcher=None):
                 summary["parsed"] += len(result.articles)
                 summary["invalid_title"] += result.invalid_title
                 summary["invalid_url"] += result.invalid_url
+                summary["skipped_items"] += result.skipped_items
             except Exception as error:
-                summary["errors"].append(f"{feed.feed_url}: {error}")
+                summary["errors"].append(f"feed_error={feed.feed_url}: {error}")
                 continue
+
+            if result.fetched_items and result.skipped_items / result.fetched_items > 0.2:
+                ratio = result.skipped_items / result.fetched_items
+                summary["warnings"].append(
+                    f"invalid_item_ratio={feed.feed_url}:{ratio:.2f}"
+                )
+            published_dates = [
+                datetime.fromisoformat(article["published_at"]).astimezone(timezone.utc)
+                for article in result.articles
+                if article["published_at"]
+            ]
+            latest_published_at = max(published_dates) if published_dates else None
+            if latest_published_at is None or latest_published_at < now - timedelta(days=7):
+                latest_value = (
+                    latest_published_at.isoformat() if latest_published_at else "unknown"
+                )
+                summary["warnings"].append(
+                    f"stale_feed={feed.feed_url}:latest={latest_value}"
+                )
 
             for article in result.articles:
                 matches = tuple(
@@ -90,6 +114,9 @@ def crawl_news(tickers, feeds=None, fetcher=None):
                     seen_urls.add(article["url"])
                     summary["matched_articles"] += 1
                     matched_articles.append((article, matches))
+
+        if summary["matched_articles"] == 0:
+            summary["warnings"].append("matched_articles=0")
 
         try:
             with get_connection() as connection, connection.cursor() as cursor:
@@ -115,12 +142,13 @@ def crawl_news(tickers, feeds=None, fetcher=None):
                         summary["errors"].append(f"{article['url']}: {error}")
 
                 summary["status"] = _source_status(summary, successful_feeds)
+                # ponytail: dùng cột sẵn có; chỉ thêm cột riêng khi cần dashboard.
                 insert_ingestion_log(
                     cursor,
                     source_id,
                     summary["status"],
                     summary["fetched"],
-                    "; ".join(summary["errors"]) or None,
+                    "; ".join((*summary["errors"], *summary["warnings"])) or None,
                 )
         except Exception as error:
             # Transaction của nguồn đã rollback nên không báo nhầm là đã lưu.

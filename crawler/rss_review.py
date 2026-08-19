@@ -28,7 +28,9 @@ FALSE_LABELS = {"false", "no", "0", "sai"}
 AMBIGUOUS_TICKERS = {"GAS", "VIC", "SSI"}
 
 
-def export_review(output_path, per_source=20, feeds=None, fetcher=fetch_feed):
+def export_review(
+    output_path, per_source=20, feeds=None, fetcher=fetch_feed, unmatched=False
+):
     if per_source < 1:
         raise ValueError("per_source phải lớn hơn 0")
     rows = defaultdict(list)
@@ -43,7 +45,7 @@ def export_review(output_path, per_source=20, feeds=None, fetcher=fetch_feed):
             continue
         for article in result.articles:
             matches = match_companies(article["title"], article["summary"])
-            if not matches or article["url"] in seen_urls:
+            if bool(matches) == unmatched or article["url"] in seen_urls:
                 continue
             seen_urls.add(article["url"])
             rows[feed.source_name].append(
@@ -110,18 +112,30 @@ def score_review(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Tạo hoặc chấm phiếu review tin RSS")
-    parser.add_argument("--output", default="reports/rss_news_review.csv")
+    parser.add_argument("--output")
     parser.add_argument("--per-source", type=int, default=20)
     parser.add_argument("--score", action="store_true", help="Chấm phiếu đã được BA điền")
+    parser.add_argument(
+        "--unmatched",
+        action="store_true",
+        help="Xuất các bài chưa nhận diện được doanh nghiệp để điều tra",
+    )
     args = parser.parse_args(argv)
+    output = args.output or (
+        "reports/rss_news_unmatched.csv"
+        if args.unmatched
+        else "reports/rss_news_review.csv"
+    )
 
     if args.score:
-        result = score_review(args.output)
+        if args.unmatched:
+            parser.error("Không thể dùng đồng thời --score và --unmatched")
+        result = score_review(output)
         print(result)
         return 0 if result["passed"] else 1
 
-    result = export_review(args.output, args.per_source)
-    print({"output": args.output, **result})
+    result = export_review(output, args.per_source, unmatched=args.unmatched)
+    print({"output": output, **result})
     return 1 if result["errors"] else 0
 
 

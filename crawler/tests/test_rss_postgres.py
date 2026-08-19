@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import psycopg2
@@ -9,6 +10,7 @@ from rss_sources import RssFeed
 
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+NOW = datetime(2026, 8, 19, tzinfo=timezone.utc)
 
 
 @unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL chưa được cấu hình")
@@ -150,15 +152,21 @@ class RssPostgresIntegrationTests(unittest.TestCase):
 
     def test_idempotency_updates_and_logs_on_real_postgres(self):
         with patch.object(crawl_news, "get_connection", side_effect=self._connect):
-            first = crawl_news.crawl_news(("FPT", "HPG"), self.feeds, self._fetcher(1))
+            first = crawl_news.crawl_news(
+                ("FPT", "HPG"), self.feeds, self._fetcher(1), now=NOW
+            )
             self.assertEqual(first["status"], "success")
             self.assertEqual(self._database_counts(), (4, 5, 4))
 
-            second = crawl_news.crawl_news(("FPT", "HPG"), self.feeds, self._fetcher(1))
+            second = crawl_news.crawl_news(
+                ("FPT", "HPG"), self.feeds, self._fetcher(1), now=NOW
+            )
             self.assertEqual(second["status"], "success")
             self.assertEqual(self._database_counts(), (4, 5, 8))
 
-            third = crawl_news.crawl_news(("FPT", "HPG"), self.feeds, self._fetcher(3))
+            third = crawl_news.crawl_news(
+                ("FPT", "HPG"), self.feeds, self._fetcher(3), now=NOW
+            )
             self.assertEqual(third["status"], "success")
             self.assertEqual(self._database_counts(), (4, 5, 12))
 
