@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 
 @Controller()
@@ -8,6 +8,15 @@ export class CompaniesController {
   @Get(['v1/companies', 'companies'])
   listCompanies() {
     return this.companiesService.listCompanies();
+  }
+
+  @Get(['v1/companies/:companyCode/news', 'companies/:companyCode/news'])
+  getCompanyNews(
+    @Param('companyCode') companyCode: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.companiesService.getCompanyNews(companyCode, page, limit);
   }
 
   @Get([

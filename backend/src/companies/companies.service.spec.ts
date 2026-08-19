@@ -35,10 +35,16 @@ describe('CompaniesService', () => {
 
   const findMany = jest.fn();
   const findUnique = jest.fn();
+  const findNews = jest.fn();
+  const countNews = jest.fn();
   const prisma = {
     company: {
       findMany,
       findUnique,
+    },
+    newsArticle: {
+      findMany: findNews,
+      count: countNews,
     },
   } as unknown as PrismaService;
 
@@ -46,6 +52,8 @@ describe('CompaniesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    findNews.mockResolvedValue([]);
+    countNews.mockResolvedValue(0);
     service = new CompaniesService(prisma);
   });
 
@@ -98,5 +106,109 @@ describe('CompaniesService', () => {
         },
       },
     });
+  });
+
+  it('trả tin mới nhất đúng doanh nghiệp và không để HTML trong tóm tắt', async () => {
+    findUnique.mockResolvedValue({ companyId: 1 });
+    findNews.mockResolvedValue([
+      {
+        articleId: 10,
+        title: 'FPT công bố kết quả kinh doanh',
+        summary: '<script>alert(1)</script><b>Doanh thu tăng trưởng</b>',
+        publishedAt: new Date('2026-08-18T09:30:00.000Z'),
+        url: 'https://example.com/fpt-news',
+        source: { sourceName: 'VnExpress RSS' },
+        companies: [
+          {
+            company: {
+              companyId: 1,
+              ticker: 'FPT',
+              companyName: 'FPT Corporation',
+            },
+          },
+        ],
+      },
+    ]);
+    countNews.mockResolvedValue(1);
+
+    const result = await service.getCompanyNews(' fpt ', '2', '5');
+
+    expect(findNews).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { companies: { some: { companyId: 1 } } },
+        skip: 5,
+        take: 5,
+        orderBy: [
+          { publishedAt: { sort: 'desc', nulls: 'last' } },
+          { articleId: 'desc' },
+        ],
+      }),
+    );
+    expect(result.data).toEqual({
+      items: [
+        {
+          articleId: 10,
+          sourceName: 'VnExpress RSS',
+          title: 'FPT công bố kết quả kinh doanh',
+          summary: 'Doanh thu tăng trưởng',
+          publishedAt: '2026-08-18T09:30:00.000Z',
+          url: 'https://example.com/fpt-news',
+          companies: [
+            {
+              companyId: 1,
+              ticker: 'FPT',
+              companyName: 'FPT Corporation',
+            },
+          ],
+        },
+      ],
+      page: 2,
+      limit: 5,
+      total: 1,
+      totalPages: 1,
+    });
+    expect(result.data?.items[0]).not.toHaveProperty('sentimentLabel');
+  });
+
+  it('trả danh sách rỗng khi doanh nghiệp chưa có tin', async () => {
+    findUnique.mockResolvedValue({ companyId: 1 });
+
+    const result = await service.getCompanyNews('FPT');
+
+    expect(result.data).toEqual({
+      items: [],
+      page: 1,
+      limit: 10,
+      total: 0,
+      totalPages: 0,
+    });
+  });
+
+  it.each([
+    ['0', undefined, 'Page must be a positive integer'],
+    ['abc', undefined, 'Page must be a positive integer'],
+    [undefined, '51', 'Limit must not exceed 50'],
+  ])('từ chối phân trang không hợp lệ', async (page, limit, details) => {
+    await expect(
+      service.getCompanyNews('FPT', page, limit),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 400,
+        error: { code: 'INVALID_PAGINATION', details },
+      },
+    });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('trả COMPANY_NOT_FOUND khi lấy tin của doanh nghiệp không tồn tại', async () => {
+    findUnique.mockResolvedValue(null);
+
+    await expect(service.getCompanyNews('missing')).rejects.toMatchObject({
+      response: {
+        statusCode: 404,
+        error: { code: 'COMPANY_NOT_FOUND' },
+      },
+    });
+    expect(findNews).not.toHaveBeenCalled();
   });
 });
