@@ -1,9 +1,4 @@
-import {
-  Citation,
-  CompanyProfile,
-  DocumentSummary,
-  FinancialSummary,
-} from '../types/api.types';
+import { Citation, CompanyProfile, FinancialSummary } from '../types/api.types';
 
 const hoseExchange = {
   exchangeId: 1,
@@ -15,25 +10,6 @@ const technologyIndustry = {
   industryId: 1,
   industryCode: 'TECH',
   industryName: 'Công nghệ thông tin',
-};
-
-const financialStatementType = {
-  docTypeId: 1,
-  typeName: 'financial_statement',
-};
-
-const annualReportType = {
-  docTypeId: 2,
-  typeName: 'annual_report',
-};
-
-const internalSource = {
-  sourceId: 1,
-  sourceName: 'WikiStock Demo Source',
-  sourceType: 'internal',
-  reliabilityTier: 3,
-  costTier: 'free',
-  accessUrl: 'https://wikistock.vn',
 };
 
 export const mockCitations: Record<string, Citation[]> = {
@@ -250,49 +226,6 @@ export const mockFinancials: Record<string, FinancialSummary> = {
       },
     ],
   },
-};
-
-export const mockDocuments: Record<string, DocumentSummary[]> = {
-  FPT: [
-    {
-      documentId: 1,
-      companyId: 1,
-      source: internalSource,
-      documentType: financialStatementType,
-      title: 'Báo cáo tài chính kiểm toán hợp nhất 2025',
-      publishedDate: '2026-01-26',
-      url: 'https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf',
-      fileRef: null,
-      crawledAt: '2026-07-09T00:00:00.000Z',
-      checksum: null,
-    },
-    {
-      documentId: 2,
-      companyId: 1,
-      source: internalSource,
-      documentType: annualReportType,
-      title: 'Báo cáo thường niên FPT 2025',
-      publishedDate: '2026-03-31',
-      url: 'https://wikistock.vn/docs/fpt/annual-report-2025.pdf',
-      fileRef: null,
-      crawledAt: '2026-07-09T00:00:00.000Z',
-      checksum: null,
-    },
-  ],
-  CMG: [
-    {
-      documentId: 3,
-      companyId: 2,
-      source: internalSource,
-      documentType: annualReportType,
-      title: 'Báo cáo thường niên CMG 2025',
-      publishedDate: '2026-03-31',
-      url: 'https://wikistock.vn/docs/cmg/annual-report-2025.pdf',
-      fileRef: null,
-      crawledAt: '2026-07-09T00:00:00.000Z',
-      checksum: null,
-    },
-  ],
 };
 
 export function findMockCompany(ticker: string): CompanyProfile | undefined {
