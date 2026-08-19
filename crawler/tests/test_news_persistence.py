@@ -1,9 +1,13 @@
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import crawl_news
 from db import upsert_news_article, upsert_news_company
 from rss_sources import RssFeed
+
+
+NOW = datetime(2026, 8, 19, tzinfo=timezone.utc)
 
 
 class FakeCursor:
@@ -90,7 +94,7 @@ class NewsPersistenceTests(unittest.TestCase):
             patch.object(crawl_news, "upsert_news_company") as company_upsert,
             patch.object(crawl_news, "insert_ingestion_log") as log_insert,
         ):
-            result = crawl_news.crawl_news(("VIC", "VNM"), feeds, fetcher)
+            result = crawl_news.crawl_news(("VIC", "VNM"), feeds, fetcher, now=NOW)
 
         self.assertEqual(fetched, [feed.feed_url for feed in feeds])
         self.assertEqual(result["status"], "success")
@@ -126,13 +130,45 @@ class NewsPersistenceTests(unittest.TestCase):
             patch.object(crawl_news, "upsert_news_company"),
             patch.object(crawl_news, "insert_ingestion_log") as log_insert,
         ):
-            result = crawl_news.crawl_news(("FPT",), (failed, healthy), fetcher)
+            result = crawl_news.crawl_news(
+                ("FPT",), (failed, healthy), fetcher, now=NOW
+            )
 
         self.assertEqual(result["status"], "partial")
         self.assertEqual(
             [source["status"] for source in result["sources"]], ["failed", "success"]
         )
         self.assertEqual(log_insert.call_count, 2)
+
+    def test_logs_stale_feed_and_high_invalid_item_ratio(self):
+        feed = RssFeed(
+            "VnExpress RSS",
+            "https://vnexpress.net/rss/test.rss",
+            ("vnexpress.net",),
+        )
+        payload = b"""<rss><channel>
+          <item><title>Tap doan FPT mo rong dau tu</title>
+            <link>https://vnexpress.net/fpt.htm</link>
+            <pubDate>Mon, 1 Aug 2026 10:00:00 +0700</pubDate></item>
+          <item><link>https://vnexpress.net/thieu-tieu-de.htm</link></item>
+        </channel></rss>"""
+        connection = FakeConnection()
+        with (
+            patch.object(crawl_news, "get_connection", return_value=connection),
+            patch.object(crawl_news, "get_company_ids", return_value={"FPT": 1}),
+            patch.object(crawl_news, "get_source_id", return_value=7),
+            patch.object(crawl_news, "upsert_news_article", return_value=123),
+            patch.object(crawl_news, "upsert_news_company"),
+            patch.object(crawl_news, "insert_ingestion_log") as log_insert,
+        ):
+            result = crawl_news.crawl_news(
+                ("FPT",), (feed,), lambda _feed: payload, now=NOW
+            )
+
+        self.assertEqual(result["status"], "partial")
+        message = log_insert.call_args.args[-1]
+        self.assertIn("invalid_item_ratio=", message)
+        self.assertIn("stale_feed=", message)
 
 
 if __name__ == "__main__":

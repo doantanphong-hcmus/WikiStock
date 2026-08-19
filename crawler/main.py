@@ -9,14 +9,33 @@ from crawl_company import crawl_company
 from crawl_financial import crawl_financial
 from crawl_news import crawl_news
 from db import get_company_id, get_connection, verify_schema, write_ingestion_log
+from rss_sources import load_enabled_feeds
 
 CORE_STAGES = ("company", "financial")
 STAGES = (*CORE_STAGES, "news")
+RSS_ADVISORY_LOCK_ID = 879447026
 
 
 def _existing_company_id(ticker):
     with get_connection() as connection, connection.cursor() as cursor:
         return get_company_id(cursor, ticker)
+
+
+def _acquire_rss_lock():
+    """Giữ kết nối mở để PostgreSQL tự nhả khóa khi tiến trình kết thúc."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT pg_try_advisory_lock(%s)", (RSS_ADVISORY_LOCK_ID,)
+            )
+            if cursor.fetchone()[0]:
+                return connection
+    except Exception:
+        connection.close()
+        raise
+    connection.close()
+    return None
 
 
 def run_ticker(ticker, selected_stage):
@@ -53,7 +72,14 @@ def parse_args(argv=None):
     parser.add_argument(
         "--stage", choices=("all", *STAGES), default="all", help="Chỉ chạy một công đoạn"
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--news-source",
+        help="Chỉ chạy một nguồn RSS, ví dụ 'VnExpress RSS'",
+    )
+    args = parser.parse_args(argv)
+    if args.news_source and args.stage != "news":
+        parser.error("--news-source chỉ dùng cùng --stage news")
+    return args
 
 
 def main(argv=None):
@@ -102,8 +128,35 @@ def main(argv=None):
     news_result = None
     if args.stage in {"all", "news"}:
         print("\n[RSS] Tải mỗi feed một lần và đối chiếu doanh nghiệp")
+        feeds = None
+        if args.news_source:
+            feeds = tuple(
+                feed
+                for feed in load_enabled_feeds()
+                if feed.source_name.casefold() == args.news_source.casefold()
+            )
+            if not feeds:
+                print(
+                    f"Không tìm thấy nguồn RSS đang bật: {args.news_source}",
+                    file=sys.stderr,
+                )
+                return 2
+
+        rss_lock = None
         try:
-            news_result = crawl_news(tickers)
+            rss_lock = _acquire_rss_lock()
+            if rss_lock is None:
+                print("[RSS] Bỏ qua vì một tiến trình RSS khác đang chạy")
+                news_result = {
+                    "status": "success",
+                    "tickers": list(tickers),
+                    "records": 0,
+                    "sources": [],
+                    "skipped": True,
+                    "reason": "rss_ingestion_already_running",
+                }
+            else:
+                news_result = crawl_news(tickers, feeds=feeds)
         except Exception as error:
             news_result = {
                 "status": "failed",
@@ -112,6 +165,9 @@ def main(argv=None):
                 "sources": [],
                 "error": str(error),
             }
+        finally:
+            if rss_lock is not None:
+                rss_lock.close()
         component_statuses.append(news_result["status"])
 
     status = (

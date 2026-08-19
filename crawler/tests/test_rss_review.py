@@ -39,6 +39,28 @@ class RssReviewTests(unittest.TestCase):
             self.assertEqual(score["precision"], 1.0)
             self.assertTrue(score["passed"])
 
+    def test_exports_articles_without_a_company_match(self):
+        feed = RssFeed(
+            "VnEconomy RSS",
+            "https://vneconomy.vn/test.rss",
+            ("vneconomy.vn",),
+        )
+        payload = b"""<rss><channel><item>
+          <title>Thi truong hom nay co nhieu bien dong</title>
+          <link>https://vneconomy.vn/thi-truong.htm</link>
+        </item></channel></rss>"""
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "unmatched.csv"
+            result = export_review(
+                path, feeds=(feed,), fetcher=lambda _feed: payload, unmatched=True
+            )
+
+            self.assertEqual(result["rows_by_source"], {"VnEconomy RSS": 1})
+            with path.open(encoding="utf-8-sig", newline="") as file:
+                row = next(csv.DictReader(file))
+            self.assertEqual(row["matched_tickers"], "")
+
 
 if __name__ == "__main__":
     unittest.main()
