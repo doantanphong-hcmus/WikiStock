@@ -51,6 +51,30 @@ export interface Company {
   citations: Citation[];
 }
 
+export interface RelatedCompanySummary {
+  companyId: number;
+  ticker: string;
+  companyName: string;
+}
+
+export interface CompanyNewsItem {
+  articleId: number;
+  sourceName: string;
+  title: string;
+  summary: string | null;
+  publishedAt: string | null;
+  url: string;
+  companies: RelatedCompanySummary[];
+}
+
+export interface CompanyNewsPage {
+  items: CompanyNewsItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface MetricSummary {
   metricId: number;
   metricCode: string;
