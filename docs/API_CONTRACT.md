@@ -276,8 +276,8 @@ B0 chốt quy ước này để Frontend và Backend dùng chung. Việc truy v�
       },
       "title": "Báo cáo tài chính kiểm toán hợp nhất 2025",
       "publishedDate": "2026-01-26",
-      "url": "https://wikistock.vn/docs/fpt/bctc-2025-kiemtoan.pdf",
-      "fileRef": null,
+      "url": "/api/v1/documents/1/file",
+      "fileRef": "FPT/bctc-2025-kiemtoan.pdf",
       "crawledAt": "2026-07-09T00:00:00.000Z",
       "checksum": null
     }
@@ -286,8 +286,10 @@ B0 chốt quy ước này để Frontend và Backend dùng chung. Việc truy v�
 }
 ```
 
-`url` có thể là `null` đối với tài liệu local; khi đó `fileRef` là tham chiếu
-nguồn nội bộ và Backend sẽ chịu trách nhiệm tạo URL tải file công khai.
+API chỉ trả tài liệu đã có trạng thái `ready` của đúng doanh nghiệp. Với tài
+liệu local, `url` là endpoint công khai `/api/v1/documents/:documentId/file`;
+với tài liệu từ xa, `url` giữ nguyên URL đã lưu trong cơ sở dữ liệu. Backend
+không tạo URL dự đoán khi cả `fileRef` và URL nguồn đều bị thiếu.
 
 ### 3.5. Đọc File Tài Liệu Đã Đăng Ký
 
@@ -307,6 +309,10 @@ Content-Disposition: inline
 ### 3.6. Citation Theo Doanh Nghiệp
 
 **Endpoint:** `GET /api/v1/companies/:companyCode/citations`
+
+API chỉ trả trích dẫn thuộc tài liệu `ready` của doanh nghiệp và có nguồn công
+khai hợp lệ. Tiêu đề, vị trí và trích đoạn được đọc trực tiếp từ cơ sở dữ liệu;
+Backend không tự tạo nội dung thay thế khi metadata bị thiếu.
 
 **Response Payload:**
 

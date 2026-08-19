@@ -10,6 +10,7 @@ import {
   Citation,
 } from '../common/types/api.types';
 import { mockCitations } from '../common/mock-data/companies';
+import { publicDocumentUrl } from '../common/document-url';
 import { PrismaService } from '../database/prisma.service';
 
 type JsonObject = Record<string, unknown>;
@@ -164,9 +165,11 @@ export class AiService {
           `Evidence at index ${index} has no canonical citation`,
         );
       }
-      const sourceUrl = chunk.document.fileRef?.trim()
-        ? `/api/v1/documents/${documentId}/file`
-        : chunk.document.url?.trim();
+      const sourceUrl = publicDocumentUrl({
+        documentId,
+        url: chunk.document.url,
+        fileRef: chunk.document.fileRef,
+      });
       if (!sourceUrl) {
         throw invalidEvidence(
           `Evidence at index ${index} has no registered source`,

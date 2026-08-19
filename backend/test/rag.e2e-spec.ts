@@ -6,7 +6,12 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { AiAskResponse, ApiResponse } from '../src/common/types/api.types';
+import {
+  AiAskResponse,
+  ApiResponse,
+  Citation,
+  DocumentSummary,
+} from '../src/common/types/api.types';
 import { PrismaService } from '../src/database/prisma.service';
 
 const describeWithDatabase = process.env.TEST_DATABASE_URL
@@ -171,5 +176,34 @@ describeWithDatabase('R7 citations (e2e)', () => {
       .expect('Content-Type', /application\/pdf/)
       .expect('Content-Disposition', /inline/)
       .expect(200);
+  });
+
+  it('serves DB-backed public documents and citations for the company', async () => {
+    const documentsResponse = await request(app.getHttpServer())
+      .get('/api/v1/companies/r7test/documents')
+      .expect(200);
+    const documents = documentsResponse.body as ApiResponse<DocumentSummary[]>;
+    expect(documents.data).toEqual([
+      expect.objectContaining({
+        documentId,
+        title: 'R7 Canonical Report',
+        url: `/api/v1/documents/${documentId}/file`,
+      }),
+    ]);
+
+    const citationsResponse = await request(app.getHttpServer())
+      .get('/api/v1/companies/r7test/citations')
+      .expect(200);
+    const citations = citationsResponse.body as ApiResponse<Citation[]>;
+    expect(citations.data).toEqual([
+      {
+        citationId,
+        documentId,
+        docTitle: 'R7 Canonical Report',
+        sourceUrl: `/api/v1/documents/${documentId}/file`,
+        locationRef: 'Trang 12',
+        excerpt: 'Canonical database evidence.',
+      },
+    ]);
   });
 });
