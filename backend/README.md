@@ -49,6 +49,10 @@ Quy trình đầy đủ và smoke test live được ghi tại
 Cấu hình bắt buộc, health check, error envelope và giới hạn request được mô tả tại
 [`docs/BACKEND_OPERATIONS.md`](../docs/BACKEND_OPERATIONS.md).
 
+Quy trình dựng toàn bộ hệ thống bằng Docker hoặc native Windows, tạo Admin, backup,
+restore và demo được ghi tại
+[`docs/BACKEND_V1_RUNBOOK.md`](../docs/BACKEND_V1_RUNBOOK.md).
+
 Do not use `prisma db push` for WikiStock databases. It does not own the custom
 pgvector column or the database-only validation constraints.
 

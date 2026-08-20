@@ -6,10 +6,6 @@ services:
     ports:
       - "5432:5432"
 
-  redis:
-    ports:
-      - "6379:6379"
-
   ai-service:
     ports:
       - "8000:8000"

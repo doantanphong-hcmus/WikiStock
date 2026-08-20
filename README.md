@@ -46,11 +46,14 @@ WikiStock/
 
 ## Chạy nhanh bằng Docker Compose
 
-Toàn bộ stack:
+Quy trình đầy đủ cho cả Docker và native Windows nằm trong
+[runbook Backend V1](docs/BACKEND_V1_RUNBOOK.md). Bản chạy nhanh bằng Compose:
 
 ```powershell
 Copy-Item .env.example .env
+# Mở .env và thay JWT_SECRET bằng chuỗi ngẫu nhiên dài ít nhất 32 ký tự.
 docker compose up -d --build
+docker compose ps --all
 ```
 
 Compose chờ PostgreSQL sẵn sàng, chạy migration và seed dữ liệu tham chiếu, kiểm tra pgvector rồi mới khởi động Backend và AI Service.
@@ -63,28 +66,12 @@ Mặc định `AI_PROVIDER=demo`, vì vậy chế độ này không gọi provid
 
 ## Chạy từng service ngoài Docker
 
-```powershell
-cd backend
-npm ci
-npm run db:bootstrap
-npm run start:dev
-```
-
-```powershell
-cd frontend
-npm ci
-npm run dev
-```
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r ai-service\requirements.txt
-cd ai-service
-..\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
-```
+Không chạy các service trước khi PostgreSQL, pgvector, migration và các file `.env`
+native đã sẵn sàng. Làm theo [quy trình native Windows](docs/BACKEND_V1_RUNBOOK.md#5-dựng-native-trên-windows) để dùng đúng thứ tự và URL của từng môi trường.
 
 ## Tài liệu vận hành
 
+- [Runbook dựng, kiểm tra và demo Backend V1](docs/BACKEND_V1_RUNBOOK.md)
 - [Cổng kiểm tra trước khi merge và phát hành](docs/CI_RELEASE_GATES.md)
 - [Runbook RAG từ database sạch](docs/RAG_OPERATIONS_RUNBOOK.md)
 - [Giới hạn đã biết và cách xử lý lỗi](docs/RAG_KNOWN_LIMITATIONS.md)
