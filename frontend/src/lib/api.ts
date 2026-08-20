@@ -33,7 +33,7 @@ function buildUrl(path: string) {
   return `${API_BASE_URL}${normalizedPath}`;
 }
 
-async function request<T>(path: string, init: RequestInit): Promise<T> {
+export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -58,6 +58,12 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     }
     throw new ApiError("Unauthorized", 401);
   }
+
+  return response;
+}
+
+async function request<T>(path: string, init: RequestInit): Promise<T> {
+  const response = await apiFetch(path, init);
 
   let payload: ApiResponse<T> | null = null;
 
