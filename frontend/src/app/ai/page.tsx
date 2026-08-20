@@ -32,7 +32,7 @@ export default function AIChatPage() {
   const [user, setUser] = useState<{ name?: string; email: string; plan?: string } | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    const timer = window.setTimeout(() => {
       const storedUser = sessionStorage.getItem("wikistock_user");
       if (storedUser) {
         try {
@@ -41,7 +41,9 @@ export default function AIChatPage() {
           setUser(null);
         }
       }
-    }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleSend = async () => {
