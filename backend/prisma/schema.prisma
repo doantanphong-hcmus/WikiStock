@@ -423,6 +423,7 @@ model AiConversation {
 model AiMessage {
   messageId        Int      @id @default(autoincrement()) @map("message_id")
   conversationId   Int      @map("conversation_id")
+  clientRequestId  String?  @map("client_request_id") @db.VarChar(100)
   role             String   @db.VarChar(10)
   content          String   @db.Text
   relatedCompanyId Int?     @map("related_company_id")
@@ -434,6 +435,7 @@ model AiMessage {
 
   citations AiMessageCitation[]
 
+  @@unique([conversationId, clientRequestId])
   @@index([conversationId, createdAt], map: "idx_ai_message_conversation_created")
   @@map("ai_message")
 }

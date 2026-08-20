@@ -46,6 +46,7 @@ export class ChatController {
       request.user.userId,
       conversationId,
       payload.content,
+      payload.clientRequestId,
     );
   }
 }
