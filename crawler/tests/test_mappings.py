@@ -20,6 +20,10 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(profile["charter_capital"], FIXTURE["profile"]["expected_capital"])
         self.assertEqual(profile["website"], FIXTURE["profile"]["expected_website"])
 
+    def test_company_profile_falls_back_to_verified_official_website(self):
+        profile = company_profile("fpt", {"organ_name": "Công ty Cổ phần FPT"})
+        self.assertEqual(profile["website"], "https://fpt.com/vi")
+
     def test_selects_four_latest_unique_quarters(self):
         frame = pd.DataFrame(columns=FIXTURE["period_columns"])
         self.assertEqual([list(item) for item in recent_periods(frame)], FIXTURE["expected_periods"])

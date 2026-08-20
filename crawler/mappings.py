@@ -44,6 +44,18 @@ RATIO_MAPPING = {
     "total_asset_turnover": "ASSET_TURNOVER",
 }
 PERCENTAGE_METRICS = {"ROE", "ROA", "GROSS_MARGIN", "NET_MARGIN"}
+OFFICIAL_WEBSITES = {
+    "FPT": "https://fpt.com/vi",
+    "GAS": "https://www.pvgas.com.vn/",
+    "HPG": "https://www.hoaphat.com.vn/",
+    "HSG": "https://hoasengroup.vn/",
+    "MWG": "https://mwg.vn/",
+    "SSI": "https://www.ssi.com.vn/",
+    "VCB": "https://www.vietcombank.com.vn/",
+    "VCG": "https://vinaconex.com.vn/",
+    "VIC": "https://vingroup.net/",
+    "VNM": "https://www.vinamilk.com.vn/",
+}
 
 
 def is_missing(value):
@@ -64,13 +76,15 @@ def first_present(row, *names):
 
 
 def company_profile(ticker, row):
+    ticker = ticker.upper()
     shares = normalize_number(first_present(row, "issue_share"))
     return {
-        "ticker": ticker.upper(),
+        "ticker": ticker,
         "company_name": str(first_present(row, "organ_name", "company_name") or ticker),
         "listing_date": first_present(row, "listing_date"),
         "charter_capital": shares * 10_000 if shares and shares > 0 else None,
-        "website": first_present(row, "website", "web_url", "website_url", "company_website"),
+        "website": first_present(row, "website", "web_url", "website_url", "company_website")
+        or OFFICIAL_WEBSITES.get(ticker),
         "description": first_present(row, "company_profile", "description"),
     }
 
