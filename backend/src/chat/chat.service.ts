@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -185,6 +186,7 @@ export class ChatService {
     userId: number,
     conversationId: number,
     content: string,
+    clientRequestId?: string,
   ): Promise<ApiResponse<CreatedUserMessage>> {
     await this.requireConversation(userId, conversationId);
     const normalizedContent = content.trim();
@@ -197,14 +199,47 @@ export class ChatService {
       conversationId,
       normalizedContent,
     );
-    const message = await this.prisma.aiMessage.create({
-      data: {
-        conversationId,
-        role: 'user',
-        content: normalizedContent,
-        relatedCompanyId: relatedCompany?.companyId,
-      },
-    });
+    const message = clientRequestId
+      ? await this.prisma.aiMessage.upsert({
+          where: {
+            conversationId_clientRequestId: {
+              conversationId,
+              clientRequestId,
+            },
+          },
+          create: {
+            conversationId,
+            clientRequestId,
+            role: 'user',
+            content: normalizedContent,
+            relatedCompanyId: relatedCompany?.companyId,
+          },
+          update: {},
+          include: {
+            relatedCompany: {
+              select: { companyId: true, ticker: true, companyName: true },
+            },
+          },
+        })
+      : await this.prisma.aiMessage.create({
+          data: {
+            conversationId,
+            role: 'user',
+            content: normalizedContent,
+            relatedCompanyId: relatedCompany?.companyId,
+          },
+          include: {
+            relatedCompany: {
+              select: { companyId: true, ticker: true, companyName: true },
+            },
+          },
+        });
+
+    if (message.role !== 'user' || message.content !== normalizedContent) {
+      throw new ConflictException(
+        'clientRequestId was already used for another message',
+      );
+    }
 
     return {
       statusCode: 201,
@@ -213,9 +248,9 @@ export class ChatService {
         messageId: message.messageId,
         role: 'user',
         content: message.content,
-        relatedCompany,
+        relatedCompany: message.relatedCompany,
         createdAt: message.createdAt.toISOString(),
-        clarification: relatedCompany
+        clarification: message.relatedCompany
           ? null
           : 'Bạn muốn hỏi về doanh nghiệp nào?',
       },

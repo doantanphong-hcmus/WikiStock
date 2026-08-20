@@ -15,6 +15,18 @@ import { PrismaService } from '../database/prisma.service';
 
 type JsonObject = Record<string, unknown>;
 
+export interface AiAskOptions {
+  signal?: AbortSignal;
+  allowDemoFallback?: boolean;
+}
+
+export class AiRequestCancelledError extends Error {
+  constructor() {
+    super('AI request was cancelled');
+    this.name = 'AiRequestCancelledError';
+  }
+}
+
 function asObject(value: unknown): JsonObject | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as JsonObject)
@@ -202,9 +214,14 @@ export class AiService {
     };
   }
 
-  async ask(payload: AiAskRequest): Promise<ApiResponse<AiAskResponse>> {
+  async ask(
+    payload: AiAskRequest,
+    options: AiAskOptions = {},
+  ): Promise<ApiResponse<AiAskResponse>> {
     const baseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8000';
-    const demoMode = process.env.AI_DEMO_MODE === 'true';
+    const demoMode =
+      process.env.AI_DEMO_MODE === 'true' &&
+      options.allowDemoFallback !== false;
     const timeoutMs = aiServiceTimeoutMs();
     const companyCode = (
       payload.companyCode ??
@@ -212,6 +229,11 @@ export class AiService {
       ''
     ).toUpperCase();
     const query = payload.query ?? payload.question ?? '';
+
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, timeoutSignal])
+      : timeoutSignal;
 
     let response: Response;
     try {
@@ -224,9 +246,13 @@ export class AiService {
           filters: payload.filters,
           conversationId: payload.conversationId,
         }),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal,
       });
     } catch (error) {
+      if (options.signal?.aborted) {
+        throw new AiRequestCancelledError();
+      }
+
       if (demoMode) {
         return this.demoFallback(companyCode);
       }
