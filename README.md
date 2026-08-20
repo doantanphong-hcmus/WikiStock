@@ -488,11 +488,11 @@ WikiStock không phải dự án mã nguồn mở, nhưng sản phẩm là kết
 </table>
 
 <p align="center">
-  <sub>Danh sách ghi nhận đóng góp theo vai trò trong dự án, không xếp hạng theo số lượng commit.</sub>
+  <sub>Danh sách ghi nhận đóng góp theo vai trò trong dự án.</sub>
 </p>
 
 ---
 
 <p align="center">
-  Sản phẩm được phát triển bởi nhóm WikiStock cho ATTACKER 2026.
+  Sản phẩm được phát triển bởi nhóm ULESER cho ATTACKER 2026.
 </p>
