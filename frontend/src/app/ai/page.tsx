@@ -47,11 +47,13 @@ interface FailedRequest {
   assistantId: string;
 }
 
-const suggestedQuestions = [
-  "Doanh thu quý 3 của FPT là bao nhiêu?",
-  "Lợi nhuận của FPT thay đổi thế nào so với cùng kỳ?",
-  "Tóm tắt tình hình tài sản và nợ phải trả của FPT.",
-];
+function suggestedQuestions(companyCode: string) {
+  return [
+    `Doanh thu quý gần nhất của ${companyCode} là bao nhiêu?`,
+    `Lợi nhuận của ${companyCode} thay đổi thế nào so với cùng kỳ?`,
+    `Tóm tắt tình hình tài sản và nợ phải trả của ${companyCode}.`,
+  ];
+}
 
 const analysisSteps = [
   "Đang xác định doanh nghiệp trong câu hỏi...",
@@ -85,12 +87,16 @@ function getInitials(name?: string | null, email?: string) {
   return email?.charAt(0).toUpperCase() || "U";
 }
 
-function citationHref(sourceUrl: string) {
+function citationHref(sourceUrl: string, locationRef?: string | null) {
   try {
     const url = new URL(sourceUrl, API_BASE_URL);
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.href
-      : undefined;
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+
+    const pageNumber = locationRef?.match(/\d+/)?.[0];
+    if (pageNumber && Number(pageNumber) > 0) {
+      url.hash = `page=${pageNumber}`;
+    }
+    return url.href;
   } catch {
     return undefined;
   }
@@ -122,18 +128,21 @@ export default function AIChatPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<number | null>(
-    null,
-  );
+  const [activeConversationId, setActiveConversationId] = useState<
+    number | null
+  >(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
+  const [companyContext, setCompanyContext] = useState("FPT");
   const [search, setSearch] = useState("");
   const [pageError, setPageError] = useState("");
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [failedRequest, setFailedRequest] = useState<FailedRequest | null>(null);
+  const [failedRequest, setFailedRequest] = useState<FailedRequest | null>(
+    null,
+  );
   const [analysisStepIndex, setAnalysisStepIndex] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeRequestRef = useRef<string | null>(null);
@@ -154,8 +163,20 @@ export default function AIChatPage() {
     let cancelled = false;
 
     async function bootstrap() {
+      const requestedCompany = new URLSearchParams(window.location.search)
+        .get("company")
+        ?.trim()
+        .toUpperCase();
+      const companyCode =
+        requestedCompany && /^[A-Z0-9]{1,10}$/.test(requestedCompany)
+          ? requestedCompany
+          : undefined;
+      const returnPath = companyCode
+        ? `/ai?company=${encodeURIComponent(companyCode)}`
+        : "/ai";
+
       if (!getAccessToken()) {
-        router.replace("/login?next=%2Fai");
+        router.replace(`/login?next=${encodeURIComponent(returnPath)}`);
         return;
       }
 
@@ -169,6 +190,17 @@ export default function AIChatPage() {
         setUser(currentUser);
         setConversations(recentConversations);
 
+        if (companyCode) {
+          setCompanyContext(companyCode);
+          selectedConversationRef.current = null;
+          setActiveConversationId(null);
+          setMessages([]);
+          setInput(
+            `Hãy tóm tắt tình hình tài chính gần nhất của ${companyCode} và dẫn nguồn từ báo cáo.`,
+          );
+          return;
+        }
+
         const firstConversation = recentConversations[0];
         if (firstConversation) {
           selectedConversationRef.current = firstConversation.conversationId;
@@ -178,7 +210,10 @@ export default function AIChatPage() {
           if (!cancelled) setMessages(history.map(toUiMessage));
         }
       } catch (error) {
-        if (!cancelled && !(error instanceof ApiError && error.statusCode === 401)) {
+        if (
+          !cancelled &&
+          !(error instanceof ApiError && error.statusCode === 401)
+        ) {
           setPageError("Không thể tải lịch sử trò chuyện từ Backend.");
         }
       } finally {
@@ -392,6 +427,7 @@ export default function AIChatPage() {
                 messageId: completed.assistantMessageId,
                 citations: completed.citations,
                 status: "complete",
+                createdAt: new Date().toISOString(),
                 isConfident: completed.isConfident,
                 limitations: completed.limitations,
               }
@@ -439,11 +475,17 @@ export default function AIChatPage() {
       <header className="w-full border-b border-gray-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between">
           <Link href="/" className="rounded-lg bg-[#101828] px-4 py-2">
-            <span className="text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+            <span
+              className="text-xl font-semibold text-white"
+              style={{ fontFamily: fontSans }}
+            >
               WikiStock
             </span>
           </Link>
-          <span className="hidden text-sm text-gray-500 sm:block" style={{ fontFamily: fontBody }}>
+          <span
+            className="hidden text-sm text-gray-500 sm:block"
+            style={{ fontFamily: fontBody }}
+          >
             Nền tảng tra cứu sức khỏe doanh nghiệp niêm yết
           </span>
         </div>
@@ -459,14 +501,18 @@ export default function AIChatPage() {
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-800 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
               style={{ fontFamily: fontBody }}
             >
-              <span aria-hidden="true" className="text-lg leading-none">+</span>
+              <span aria-hidden="true" className="text-lg leading-none">
+                +
+              </span>
               Cuộc trò chuyện mới
             </button>
           </div>
 
           <div className="border-b border-gray-300 p-4">
             <label className="flex items-center gap-3 rounded-full border border-gray-300 bg-white px-4 py-2.5">
-              <span aria-hidden="true" className="text-gray-500">⌕</span>
+              <span aria-hidden="true" className="text-gray-500">
+                ⌕
+              </span>
               <span className="sr-only">Tìm cuộc trò chuyện</span>
               <input
                 type="search"
@@ -490,7 +536,9 @@ export default function AIChatPage() {
                   <button
                     type="button"
                     key={conversation.conversationId}
-                    onClick={() => void openConversation(conversation.conversationId)}
+                    onClick={() =>
+                      void openConversation(conversation.conversationId)
+                    }
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition ${
                       activeConversationId === conversation.conversationId
                         ? "bg-white font-medium text-gray-950"
@@ -504,7 +552,9 @@ export default function AIChatPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                {search ? "Không tìm thấy cuộc trò chuyện." : "Chưa có cuộc trò chuyện nào."}
+                {search
+                  ? "Không tìm thấy cuộc trò chuyện."
+                  : "Chưa có cuộc trò chuyện nào."}
               </p>
             )}
           </div>
@@ -532,12 +582,18 @@ export default function AIChatPage() {
             onScroll={(event) => {
               const element = event.currentTarget;
               shouldAutoScrollRef.current =
-                element.scrollHeight - element.scrollTop - element.clientHeight < 100;
+                element.scrollHeight -
+                  element.scrollTop -
+                  element.clientHeight <
+                100;
             }}
             className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
           >
             {pageError ? (
-              <div role="alert" className="mx-auto mb-4 max-w-3xl rounded-xl bg-red-50 p-4 text-sm text-red-700">
+              <div
+                role="alert"
+                className="mx-auto mb-4 max-w-3xl rounded-xl bg-red-50 p-4 text-sm text-red-700"
+              >
                 {pageError}
               </div>
             ) : null}
@@ -548,14 +604,18 @@ export default function AIChatPage() {
               </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center py-10">
-                <h1 className="mb-3 text-center text-3xl font-medium text-gray-950 sm:text-4xl" style={{ fontFamily: fontBody }}>
-                  Bạn muốn tìm hiểu doanh nghiệp nào?
+                <h1
+                  className="mb-3 text-center text-3xl font-medium text-gray-950 sm:text-4xl"
+                  style={{ fontFamily: fontBody }}
+                >
+                  Bạn muốn tìm hiểu {companyContext} điều gì?
                 </h1>
                 <p className="mb-8 max-w-xl text-center text-sm text-gray-500">
-                  Hỏi về báo cáo tài chính và kiểm tra nguồn dẫn chứng ngay trong câu trả lời.
+                  Hỏi về báo cáo tài chính và kiểm tra nguồn dẫn chứng ngay
+                  trong câu trả lời.
                 </p>
                 <div className="grid w-full max-w-3xl gap-3 md:grid-cols-3">
-                  {suggestedQuestions.map((question) => (
+                  {suggestedQuestions(companyContext).map((question) => (
                     <button
                       type="button"
                       key={question}
@@ -571,34 +631,53 @@ export default function AIChatPage() {
                     AI
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">WikiStock AI</p>
-                    <p className="text-xs text-gray-500">Trả lời bằng dữ liệu RAG có dẫn nguồn</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      WikiStock AI
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Trả lời bằng dữ liệu RAG có dẫn nguồn
+                    </p>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="mx-auto max-w-3xl space-y-5">
                 {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    key={message.id}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
                     <article
                       className={`max-w-[88%] rounded-2xl border border-gray-200 bg-white px-5 py-4 text-gray-900 ${
-                        message.role === "user" ? "rounded-br-md shadow-sm" : "rounded-bl-md"
+                        message.role === "user"
+                          ? "rounded-br-md shadow-sm"
+                          : "rounded-bl-md"
                       }`}
                     >
                       {message.content ? (
-                        <p className="whitespace-pre-wrap break-words text-base leading-7" style={{ fontFamily: fontBody }}>
+                        <p
+                          className="whitespace-pre-wrap break-words text-base leading-7"
+                          style={{ fontFamily: fontBody }}
+                        >
                           {message.content}
                           {message.status === "streaming" ? (
-                            <span className="ml-1 inline-block h-4 w-1 animate-pulse bg-gray-700" aria-label="Đang trả lời" />
+                            <span
+                              className="ml-1 inline-block h-4 w-1 animate-pulse bg-gray-700"
+                              aria-label="Đang trả lời"
+                            />
                           ) : null}
                         </p>
-                      ) : message.role === "assistant" && message.status === "sending" ? (
+                      ) : message.role === "assistant" &&
+                        message.status === "sending" ? (
                         <div
                           className="flex min-w-72 items-center gap-4 py-1"
                           role="status"
                           aria-live="polite"
                         >
-                          <span className="flex items-center gap-1.5" aria-hidden="true">
+                          <span
+                            className="flex items-center gap-1.5"
+                            aria-hidden="true"
+                          >
                             <span className="chat-thinking-dot" />
                             <span className="chat-thinking-dot" />
                             <span className="chat-thinking-dot" />
@@ -613,7 +692,10 @@ export default function AIChatPage() {
                       ) : null}
 
                       {message.errorMessage ? (
-                        <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="alert">
+                        <div
+                          className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900"
+                          role="alert"
+                        >
                           <p>{message.errorMessage}</p>
                           {failedRequest?.assistantId === message.id ? (
                             <button
@@ -634,29 +716,49 @@ export default function AIChatPage() {
                         </div>
                       ) : null}
 
-                      {message.status === "complete" && message.isConfident === false ? (
+                      {message.status === "complete" &&
+                      message.isConfident === false ? (
                         <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-                          {message.limitations || "Câu trả lời này chưa có đủ nguồn dữ liệu để xác nhận."}
+                          {message.limitations ||
+                            "Câu trả lời này chưa có đủ nguồn dữ liệu để xác nhận."}
                         </p>
                       ) : null}
 
-                      {message.role === "assistant" && message.citations.length ? (
+                      {message.role === "assistant" &&
+                      message.citations.length ? (
                         <div className="mt-4 border-t border-gray-100 pt-3">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Nguồn đã kiểm chứng</p>
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Nguồn đã kiểm chứng
+                          </p>
                           <ul className="space-y-2">
                             {message.citations.map((citation) => {
-                              const href = citationHref(citation.sourceUrl);
+                              const href = citationHref(
+                                citation.sourceUrl,
+                                citation.locationRef,
+                              );
                               return (
-                                <li key={citation.citationId} className="text-sm">
+                                <li
+                                  key={citation.citationId}
+                                  className="text-sm"
+                                >
                                   {href ? (
-                                    <a href={href} target="_blank" rel="noreferrer" className="font-medium text-blue-700 hover:underline">
-                                      {citation.docTitle}
+                                    <a
+                                      href={href}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="font-medium text-blue-700 hover:underline"
+                                    >
+                                      Mở báo cáo: {citation.docTitle}
                                     </a>
                                   ) : (
-                                    <span className="font-medium text-gray-700">{citation.docTitle}</span>
+                                    <span className="font-medium text-gray-700">
+                                      Báo cáo: {citation.docTitle}
+                                    </span>
                                   )}
                                   {citation.locationRef ? (
-                                    <span className="ml-2 text-xs text-gray-500">{citation.locationRef}</span>
+                                    <span className="ml-2 whitespace-nowrap text-xs font-medium text-gray-600">
+                                      · {citation.locationRef}
+                                    </span>
                                   ) : null}
                                 </li>
                               );
@@ -665,8 +767,14 @@ export default function AIChatPage() {
                         </div>
                       ) : null}
 
-                      <time className="mt-2 block text-right text-[11px] text-gray-400" dateTime={message.createdAt}>
-                        {new Date(message.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                      <time
+                        className="mt-2 block text-right text-[11px] text-gray-400"
+                        dateTime={message.createdAt}
+                      >
+                        {new Date(message.createdAt).toLocaleTimeString(
+                          "vi-VN",
+                          { hour: "2-digit", minute: "2-digit" },
+                        )}
                       </time>
                     </article>
                   </div>
@@ -677,7 +785,9 @@ export default function AIChatPage() {
 
           <div className="border-t border-gray-200 bg-[#F3F3F3] p-3 sm:p-4">
             <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-3xl border border-gray-300 bg-white px-5 py-3">
-              <label htmlFor="chat-input" className="sr-only">Nhập câu hỏi</label>
+              <label htmlFor="chat-input" className="sr-only">
+                Nhập câu hỏi
+              </label>
               <textarea
                 id="chat-input"
                 rows={1}
@@ -703,7 +813,12 @@ export default function AIChatPage() {
                 <button
                   type="button"
                   onClick={() => void sendQuestion(input)}
-                  disabled={!input.trim() || isBusy || isBootstrapping || isLoadingHistory}
+                  disabled={
+                    !input.trim() ||
+                    isBusy ||
+                    isBootstrapping ||
+                    isLoadingHistory
+                  }
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#101828] text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Gửi câu hỏi"
                   title="Gửi câu hỏi"
@@ -713,7 +828,8 @@ export default function AIChatPage() {
               )}
             </div>
             <p className="mt-2 text-center text-xs text-gray-500">
-              Enter để gửi · Shift + Enter để xuống dòng · Luôn kiểm tra nguồn trước quyết định tài chính
+              Enter để gửi · Shift + Enter để xuống dòng · Luôn kiểm tra nguồn
+              trước quyết định tài chính
             </p>
           </div>
         </section>

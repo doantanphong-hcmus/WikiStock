@@ -3,14 +3,10 @@ import { CompanySummaryCard } from "@/components/company/CompanySummaryCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { Badge } from "@/components/ui/Badge";
-import { getCitations, getDocuments } from "@/features/citation/api";
+import { getDocuments } from "@/features/citation/api";
 import { getCompany, getCompanyNews } from "@/features/company/api";
-import type {
-  Citation,
-  Company,
-  CompanyNewsPage,
-  DocumentSummary,
-} from "@/lib/types";
+import { API_BASE_URL } from "@/lib/env";
+import type { Company, CompanyNewsPage, DocumentSummary } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,18 +24,26 @@ function formatPublishedAt(value: string | null) {
   }).format(date);
 }
 
+function documentHref(value: string | null) {
+  if (!value) return null;
+  try {
+    const publicApiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? API_BASE_URL;
+    return new URL(value, publicApiBase).href;
+  } catch {
+    return null;
+  }
+}
+
 export default async function CompanyPage({ params }: PageProps) {
   const { ticker } = await params;
   let company: Company | null = null;
-  let citations: Citation[] = [];
   let documents: DocumentSummary[] = [];
   let news: CompanyNewsPage | null = null;
   let errorMessage: string | null = null;
 
   try {
-    [company, citations, documents, news] = await Promise.all([
+    [company, documents, news] = await Promise.all([
       getCompany(ticker),
-      getCitations(ticker),
       getDocuments(ticker),
       getCompanyNews(ticker),
     ]);
@@ -128,21 +132,27 @@ export default async function CompanyPage({ params }: PageProps) {
         )}
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-950">Documents</h2>
-          <ul className="mt-4 space-y-3">
-            {documents.map((document) => (
+      <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-zinc-950">
+          Báo cáo doanh nghiệp
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Mở báo cáo gốc để xem và đối chiếu số liệu của doanh nghiệp.
+        </p>
+        <ul className="mt-4 space-y-3">
+          {documents.map((document) => {
+            const href = documentHref(document.url);
+            return (
               <li
                 key={document.documentId}
                 className="rounded-md border border-zinc-200 p-3"
               >
-                {document.url ? (
+                {href ? (
                   <a
-                    href={document.url}
+                    href={href}
                     target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-medium text-emerald-800"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-emerald-800 hover:underline"
                   >
                     {document.title}
                   </a>
@@ -152,35 +162,16 @@ export default async function CompanyPage({ params }: PageProps) {
                   </p>
                 )}
                 <p className="mt-1 text-xs text-zinc-500">
-                  {document.documentType.typeName} -{" "}
-                  {document.publishedDate ?? "N/A"}
+                  {document.documentType.typeName === "financial_statement"
+                    ? "Báo cáo tài chính"
+                    : document.documentType.typeName}
+                  {document.publishedDate ? ` · ${document.publishedDate}` : ""}
+                  {href ? " · Mở PDF" : ""}
                 </p>
               </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-950">Citations</h2>
-          <ul className="mt-4 space-y-3">
-            {citations.map((citation) => (
-              <li
-                key={citation.citationId}
-                className="rounded-md border border-zinc-200 p-3"
-              >
-                <p className="text-sm font-medium text-zinc-950">
-                  {citation.docTitle}
-                </p>
-                {citation.locationRef ? (
-                  <p className="mt-1 text-xs text-zinc-500">
-                    {citation.locationRef}
-                  </p>
-                ) : null}
-                <p className="mt-2 text-sm text-zinc-600">{citation.excerpt}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
+            );
+          })}
+        </ul>
       </section>
     </div>
   );

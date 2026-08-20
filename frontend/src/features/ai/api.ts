@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch, apiGet, apiPost } from "@/lib/api";
-import type { AiAskRequest, AiAskResponse, Citation } from "@/lib/types";
+import type { Citation } from "@/lib/types";
 import { extractSseEvents, type ParsedSseEvent } from "./sse";
 
 export interface ChatConversation {
@@ -183,8 +183,4 @@ export async function streamChatMessage(
   }
 
   return completed;
-}
-
-export function askAi(payload: AiAskRequest) {
-  return apiPost<AiAskResponse, AiAskRequest>("/ai/ask", payload);
 }

@@ -127,24 +127,6 @@ export interface DocumentSummary {
   checksum: string | null;
 }
 
-export interface AiAskRequest {
-  query: string;
-  companyCode: string;
-  filters?: {
-    year?: number;
-    documentTypes?: string[];
-  };
-  context?: string;
-  conversationId?: string;
-}
-
-export interface AiAskResponse {
-  answer: string;
-  isConfident: boolean;
-  citations: Citation[];
-  limitations?: string;
-}
-
 export interface AdminCompanyStatus {
   companyId: number;
   ticker: string;
