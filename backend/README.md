@@ -46,6 +46,9 @@ npm run test:e2e:real-data
 Quy trình đầy đủ và smoke test live được ghi tại
 [`docs/BACKEND_REAL_DATA_E2E.md`](../docs/BACKEND_REAL_DATA_E2E.md).
 
+Cấu hình bắt buộc, health check, error envelope và giới hạn request được mô tả tại
+[`docs/BACKEND_OPERATIONS.md`](../docs/BACKEND_OPERATIONS.md).
+
 Do not use `prisma db push` for WikiStock databases. It does not own the custom
 pgvector column or the database-only validation constraints.
 
