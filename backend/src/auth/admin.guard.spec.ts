@@ -1,13 +1,8 @@
 /// <reference types="jest" />
 
-import {
-  ExecutionContext,
-  ForbiddenException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../database/prisma.service';
+import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AdminGuard, AdminRequest } from './admin.guard';
+import { AuthenticatedGuard } from './authenticated.guard';
 
 function createContext(request: Partial<AdminRequest>) {
   return {
@@ -16,62 +11,42 @@ function createContext(request: Partial<AdminRequest>) {
 }
 
 describe('AdminGuard', () => {
-  const originalJwtSecret = process.env.JWT_SECRET;
-  const jwtService = { verifyAsync: jest.fn() };
-  const prisma = { appUser: { findUnique: jest.fn() } };
+  const authenticatedGuard = { canActivate: jest.fn() };
   const guard = new AdminGuard(
-    jwtService as unknown as JwtService,
-    prisma as unknown as PrismaService,
+    authenticatedGuard as unknown as AuthenticatedGuard,
   );
 
   beforeEach(() => {
-    process.env.JWT_SECRET = 'test-secret-with-at-least-32-characters';
     jest.clearAllMocks();
-  });
-
-  afterAll(() => {
-    if (originalJwtSecret === undefined) {
-      delete process.env.JWT_SECRET;
-    } else {
-      process.env.JWT_SECRET = originalJwtSecret;
-    }
-  });
-
-  it('rejects requests without a bearer token', async () => {
-    await expect(
-      guard.canActivate(createContext({ headers: {} })),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    authenticatedGuard.canActivate.mockResolvedValue(true);
   });
 
   it('rejects authenticated users whose current role is not admin', async () => {
-    jwtService.verifyAsync.mockResolvedValue({ sub: 2 });
-    prisma.appUser.findUnique.mockResolvedValue({
-      userId: 2,
-      email: 'user@wikistock.vn',
-      fullName: 'User',
-      role: { roleId: 2, roleName: 'user' },
-    });
-
     await expect(
       guard.canActivate(
-        createContext({ headers: { authorization: 'Bearer valid-token' } }),
+        createContext({
+          user: {
+            userId: 2,
+            email: 'user@wikistock.vn',
+            fullName: 'User',
+            role: { roleId: 2, roleName: 'user' },
+          },
+        }),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('allows admins and attaches the current database identity', async () => {
     const request = {
-      headers: { authorization: 'Bearer valid-token' },
+      user: {
+        userId: 1,
+        email: 'admin@wikistock.vn',
+        fullName: 'Admin',
+        role: { roleId: 1, roleName: 'admin' },
+      },
     } as Partial<AdminRequest>;
-    jwtService.verifyAsync.mockResolvedValue({ sub: 1 });
-    prisma.appUser.findUnique.mockResolvedValue({
-      userId: 1,
-      email: 'admin@wikistock.vn',
-      fullName: 'Admin',
-      role: { roleId: 1, roleName: 'admin' },
-    });
 
     await expect(guard.canActivate(createContext(request))).resolves.toBe(true);
-    expect(request.user).toMatchObject({ userId: 1, roleName: 'admin' });
+    expect(authenticatedGuard.canActivate).toHaveBeenCalled();
   });
 });
