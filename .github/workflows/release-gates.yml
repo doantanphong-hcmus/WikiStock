@@ -1,0 +1,110 @@
+name: Release gates
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: release-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgresql://app_user:app_password@localhost:5432/wikistock_test
+  TEST_DATABASE_URL: postgresql://app_user:app_password@localhost:5432/wikistock_test
+  JWT_SECRET: ci-only-placeholder-secret-at-least-32-characters
+  AI_SERVICE_URL: http://localhost:8000
+  FRONTEND_URL: http://localhost:3000
+  SEED_DATA_PATH: /tmp/wikistock-seed
+
+jobs:
+  backend-quality:
+    name: Backend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate and generate Prisma client
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run unit tests
+        run: npm test -- --runInBand
+
+      - name: Build
+        run: npm run build
+
+      - name: Ensure checks did not rewrite tracked files
+        working-directory: .
+        run: git diff --exit-code
+
+  backend-db-integration:
+    name: Backend PostgreSQL integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: app_user
+          POSTGRES_PASSWORD: app_password
+          POSTGRES_DB: wikistock_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_user -d wikistock_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Bootstrap empty database
+        run: npm run db:bootstrap
+
+      - name: Verify migrations are repeatable
+        run: npm run db:migrate
+
+      - name: Run PostgreSQL E2E tests
+        run: npm run test:e2e -- --runInBand
