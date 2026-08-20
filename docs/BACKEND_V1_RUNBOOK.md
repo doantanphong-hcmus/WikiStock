@@ -397,3 +397,416 @@ Remove-Item Env:ADMIN_EMAIL, Env:ADMIN_PASSWORD, Env:ADMIN_FULL_NAME -ErrorActio
 Trang đăng nhập Frontend hiện vẫn là giao diện demo và chưa gọi Auth API. Vì vậy phải
 dùng request trên để nghiệm thu Admin; không dùng việc Frontend chấp nhận email làm
 bằng chứng xác thực Backend hoạt động.
+
+## 7. Kiểm thử nhanh và đầy đủ
+
+### 7.1. Smoke test trước buổi demo
+
+Chạy khi các service đã bật:
+
+```powershell
+$health = Invoke-RestMethod http://localhost:3001/api/health
+if ($health.data.status -ne 'ready') { throw 'Backend chưa sẵn sàng' }
+
+Invoke-RestMethod http://localhost:3001/api/v1/companies
+Invoke-RestMethod http://localhost:3001/api/v1/companies/FPT/profile
+Invoke-RestMethod http://localhost:3001/api/v1/companies/FPT/financials
+Invoke-RestMethod 'http://localhost:3001/api/v1/companies/FPT/financials?year=2025&quarter=4'
+Invoke-RestMethod 'http://localhost:3001/api/v1/companies/FPT/news?page=1&limit=5'
+Invoke-RestMethod http://localhost:3001/api/v1/companies/FPT/documents
+Invoke-RestMethod http://localhost:3001/api/v1/companies/FPT/citations
+```
+
+Một endpoint trả `200` chưa chứng minh dữ liệu tài chính đúng. Kiểm tra nội dung FPT,
+kỳ báo cáo, đơn vị và URL nguồn trước khi demo.
+
+### 7.2. Quality test không cần dịch vụ live
+
+Backend:
+
+```powershell
+cd backend
+npm.cmd run lint:check
+npm.cmd run format:check
+npm.cmd test -- --runInBand
+npm.cmd run build
+cd ..
+```
+
+Crawler:
+
+```powershell
+cd crawler
+.\.venv\Scripts\python.exe -m compileall -q .
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+cd ..
+```
+
+AI Service:
+
+```powershell
+cd ai-service
+..\.venv\Scripts\python.exe -m compileall -q app main.py
+..\.venv\Scripts\python.exe -m unittest discover -s tests -v
+cd ..
+```
+
+Frontend:
+
+```powershell
+cd frontend
+npm.cmd run lint
+npm.cmd run build
+cd ..
+```
+
+Các test live bị skip là hành vi đúng. Không bật mạng hoặc API key chỉ để làm cho số
+test skip bằng 0.
+
+### 7.3. PostgreSQL integration và HTTP E2E
+
+Database test phải tách khỏi `app_db` và có hậu tố `_test`. Các test được phép tạo,
+cập nhật và xóa fixture trong database này.
+
+```powershell
+$pgBin = 'C:\Program Files\PostgreSQL\16\bin'
+& "$pgBin\psql.exe" -U postgres -d postgres -c "CREATE DATABASE wikistock_test OWNER app_user;"
+& "$pgBin\psql.exe" -U postgres -d wikistock_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+cd backend
+$env:DATABASE_URL = 'postgresql://app_user:app_password@localhost:5432/wikistock_test'
+$env:TEST_DATABASE_URL = $env:DATABASE_URL
+npm.cmd run db:bootstrap
+npm.cmd run test:e2e -- --runInBand
+cd ..
+```
+
+Sau Backend E2E, có thể chạy integration test của AI Service và crawler trên cùng
+database test đã bootstrap:
+
+```powershell
+cd ai-service
+..\.venv\Scripts\python.exe -m unittest tests.test_persistence tests.test_retrieval -v
+cd ..\crawler
+.\.venv\Scripts\python.exe -m unittest tests.test_rss_postgres -v
+cd ..
+```
+
+Xóa hai biến khỏi terminal sau khi chạy để tránh crawler thường ngày ghi nhầm DB test:
+
+```powershell
+Remove-Item Env:DATABASE_URL, Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
+```
+
+CI thực hiện các gate tương đương trên môi trường sạch. Xem
+[tài liệu release gate](CI_RELEASE_GATES.md) để biết sáu check bắt buộc.
+
+## 8. Kịch bản demo từ đầu đến cuối
+
+### 8.1. Luồng không dùng AI provider
+
+1. Mở `http://localhost:3000/search` và tìm FPT.
+2. Mở `/companies/FPT` để xem hồ sơ, tin RSS, tài liệu và nguồn.
+3. Mở `/companies/FPT/financials` để xem báo cáo tài chính.
+4. Chứng minh API trả dữ liệu PostgreSQL bằng các request ở Mục 7.1.
+5. Mở `/companies/FPT/ai`; với `AI_PROVIDER=demo`, kết quả phải ghi rõ không tự tin,
+   không có citation và không được trình bày như phân tích tài chính thật.
+
+Trang `/ai` là giao diện chatbot mẫu chưa nối Backend. Không dùng trang đó để chứng
+minh RAG hoạt động.
+
+### 8.2. Chứng minh thiếu API key không làm hỏng dữ liệu nền
+
+Đặt `AI_PROVIDER=gateway`, để `AI_API_KEY` rỗng và giữ `AI_DEMO_MODE=false`, sau đó
+khởi động lại AI Service. Request AI phải trả lỗi rõ ràng; hai request sau vẫn phải
+thành công:
+
+```powershell
+Invoke-RestMethod http://localhost:3001/api/v1/companies/FPT/profile
+Invoke-RestMethod http://localhost:3001/api/v1/companies/FPT/financials
+```
+
+Không bật `AI_DEMO_MODE=true` để biến lỗi provider thành câu trả lời giả thành công.
+
+### 8.3. Demo RAG với provider thật
+
+Điền Client API key vào `ai-service/.env` hoặc `.env` local qua kênh an toàn:
+
+```dotenv
+AI_PROVIDER=gateway
+AI_DEMO_MODE=false
+AI_API_BASE_URL=https://claude.zunef.com/v1/ai
+AI_API_KEY=<CLIENT_API_KEY>
+AI_MODEL=claude-sonnet-4-6
+```
+
+Khởi động lại AI Service, mở `/companies/FPT/ai` và đặt câu hỏi thuộc đúng tài liệu đã
+ingest. Câu trả lời chỉ đạt khi:
+
+- `answer` không rỗng.
+- `isConfident=true` chỉ khi có đủ bằng chứng.
+- Có citation do Backend dựng từ database.
+- Citation mở đúng PDF, đúng doanh nghiệp và đúng trang.
+- `excerpt` trực tiếp hỗ trợ mệnh đề đang được trả lời.
+- Câu ngoài dữ liệu trả `isConfident=false` và không bịa nguồn.
+
+Các bước mở PDF và đối chiếu trang nằm tại
+[runbook RAG, mục citation](RAG_OPERATIONS_RUNBOOK.md#12-mở-citation-và-đối-chiếu-đúng-trang).
+
+## 9. Backup và restore database demo
+
+Database dump không chứa file PDF vì `source_document.file_ref` chỉ lưu tham chiếu.
+Muốn phục hồi demo đầy đủ phải giữ cả database dump và thư mục `runtime/ocr/output`.
+Model cache không bắt buộc backup vì có thể tải lại.
+
+### 9.1. Backup native Windows
+
+```powershell
+$pgBin = 'C:\Program Files\PostgreSQL\16\bin'
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+New-Item -ItemType Directory -Force backups | Out-Null
+$dump = (Resolve-Path backups).Path + "\wikistock-demo-$stamp.dump"
+
+& "$pgBin\pg_dump.exe" `
+  -h localhost -p 5432 -U app_user -d app_db `
+  -Fc --no-owner --file $dump
+
+& "$pgBin\pg_restore.exe" --list $dump | Select-Object -First 20
+Compress-Archive -Path runtime\ocr\output -DestinationPath "backups\wikistock-pdf-$stamp.zip"
+```
+
+Không dùng PowerShell `>` để ghi binary custom dump vì Windows PowerShell cũ có thể
+làm hỏng byte stream. Dùng `--file` như trên.
+
+### 9.2. Restore native vào database mới
+
+Restore vào database mới để kiểm tra trước; không ghi đè `app_db` đang demo:
+
+```powershell
+$restoreDb = 'app_db_restore'
+& "$pgBin\createdb.exe" -h localhost -p 5432 -U postgres -O app_user $restoreDb
+& "$pgBin\psql.exe" -h localhost -p 5432 -U postgres -d $restoreDb `
+  -c "CREATE EXTENSION IF NOT EXISTS vector;"
+& "$pgBin\pg_restore.exe" -h localhost -p 5432 -U app_user -d $restoreDb `
+  --no-owner --exit-on-error $dump
+& "$pgBin\psql.exe" -h localhost -p 5432 -U app_user -d $restoreDb `
+  -c "SELECT count(*) AS companies FROM company;"
+```
+
+Chỉ đổi `DATABASE_URL` sang database restore sau khi migration table, số công ty,
+báo cáo, tin tức, tài liệu và chunk đã được kiểm tra.
+
+### 9.3. Backup Docker
+
+```powershell
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$name = "wikistock-demo-$stamp.dump"
+New-Item -ItemType Directory -Force backups | Out-Null
+
+docker compose exec -T postgres `
+  pg_dump -U app_user -d app_db -Fc --no-owner --file "/tmp/$name"
+docker compose exec -T postgres pg_restore --list "/tmp/$name"
+docker compose cp "postgres:/tmp/$name" ".\backups\$name"
+Compress-Archive -Path runtime\ocr\output -DestinationPath "backups\wikistock-pdf-$stamp.zip"
+```
+
+### 9.4. Restore Docker vào database mới
+
+```powershell
+$name = '<TEN_FILE_DUMP>'
+docker compose cp ".\backups\$name" "postgres:/tmp/$name"
+docker compose exec -T postgres createdb -U app_user -O app_user app_db_restore
+docker compose exec -T postgres psql -U app_user -d app_db_restore `
+  -c "CREATE EXTENSION IF NOT EXISTS vector;"
+docker compose exec -T postgres pg_restore -U app_user -d app_db_restore `
+  --no-owner --exit-on-error "/tmp/$name"
+docker compose exec -T postgres psql -U app_user -d app_db_restore `
+  -c "SELECT count(*) AS companies FROM company;"
+```
+
+Không xóa volume hoặc database hiện tại cho đến khi bản restore đã được kiểm tra.
+
+## 10. Xử lý lỗi thường gặp
+
+### Backend hoặc crawler không kết nối được PostgreSQL
+
+```powershell
+$pgBin = 'C:\Program Files\PostgreSQL\16\bin'
+& "$pgBin\pg_isready.exe" -h localhost -p 5432
+```
+
+- Native dùng `localhost`; service trong Compose dùng hostname `postgres`.
+- Kiểm tra đúng cổng, database, user và password trong URL.
+- Nếu cổng 5432 đã bị PostgreSQL native chiếm, không bật đồng thời PostgreSQL Compose
+  với override mặc định.
+- Gọi `/api/health`; `DATABASE_UNAVAILABLE` nghĩa là Backend còn chạy nhưng DB chưa
+  sẵn sàng.
+
+### Thiếu pgvector
+
+```sql
+SELECT name, default_version, installed_version
+FROM pg_available_extensions
+WHERE name = 'vector';
+```
+
+- Không có dòng: pgvector chưa được cài đúng PostgreSQL major version trên server.
+- Có `default_version` nhưng `installed_version` rỗng: dùng tài khoản quản trị chạy
+  `CREATE EXTENSION vector` trong đúng database.
+- Không đổi schema sang kiểu text để né lỗi vector.
+
+### Migration hoặc seed lỗi
+
+- Không chạy `schema.sql` hoặc `prisma db push` để “vá nhanh”.
+- Chạy riêng `npm.cmd run db:migrate`, `db:seed`, `db:check` để biết bước nào lỗi.
+- Với database legacy đã có dữ liệu, làm theo cảnh báo trong `backend/README.md`; không
+  áp baseline migration mù.
+
+### VNStock đổi response hoặc thiếu cột
+
+```powershell
+cd crawler
+.\.venv\Scripts\python.exe -m unittest tests.test_mappings -v
+.\.venv\Scripts\python.exe main.py --ticker FPT --stage company
+.\.venv\Scripts\python.exe main.py --ticker FPT --stage financial
+```
+
+Giữ mẫu response đã khử dữ liệu nhạy cảm, cập nhật mapping và fixture cùng nhau. Không
+đổi database hoặc Backend để che lỗi nguồn. Một mã lỗi không được làm mất summary của
+các mã còn lại.
+
+### RSS lỗi hoặc không có tin mới
+
+Chạy lại một nguồn và kiểm tra health:
+
+```powershell
+cd crawler
+.\.venv\Scripts\python.exe main.py --stage news --news-source 'VnExpress RSS'
+.\.venv\Scripts\python.exe rss_health.py
+```
+
+Nếu cấu trúc XML thay đổi, sửa parser cùng fixture. Không tạo URL suy đoán và không tự
+gán doanh nghiệp chỉ để giảm số bài chưa khớp. Xem
+[runbook RSS](RSS_NEWS_OPERATIONS_RUNBOOK.md).
+
+### AI thiếu key, sai xác thực hoặc timeout
+
+- `AI_PROVIDER=demo`: không cần key, luôn không tự tin và không có evidence.
+- `AI_PROVIDER=gateway`: cần Client API key phù hợp với `AI_AUTH_SCHEME`.
+- `AI_API_KEY_REQUIRED`/`AI_AUTHENTICATION_FAILED`: kiểm tra key và base URL, không in
+  key vào log.
+- `AI_CONNECT_TIMEOUT`: kiểm tra DNS, mạng và gateway.
+- `AI_READ_TIMEOUT`: kiểm tra provider trước khi tăng timeout; không tăng vô hạn.
+- Provider lỗi phải fail closed; không bật fallback mock trong nghiệm thu online.
+
+### PDF không nằm trong seed root
+
+- Native: `SEED_DATA_PATH` phải trỏ tới `../runtime/ocr/output` khi chạy trong
+  `ai-service`.
+- Compose: `RAG_SEED_DATA_PATH` là đường dẫn host; `SEED_DATA_PATH` trong container là
+  `/data/seed_data`.
+- Không dùng symlink hoặc `..` để thoát seed root.
+- Chạy dry-run một file/batch trước khi ingest.
+- Nếu nhận `PDF_NEEDS_OCR`, xử lý theo [tài liệu OCR](OCR_PREPROCESSING.md).
+
+### Frontend không thấy dữ liệu
+
+- Native: cả `API_BASE_URL` và `NEXT_PUBLIC_API_BASE_URL` dùng
+  `http://localhost:3001/api/v1`.
+- Compose: `API_BASE_URL` dùng `http://backend:3001/api/v1`, còn biến `NEXT_PUBLIC_*`
+  vẫn dùng URL trình duyệt truy cập được.
+- Sau khi đổi `NEXT_PUBLIC_API_BASE_URL`, phải build lại Frontend image/client bundle.
+- Kiểm tra Backend API trực tiếp trước khi kết luận Frontend lỗi.
+
+### Port đã được sử dụng
+
+```powershell
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -In 3000,3001,5432,8000
+```
+
+Không chạy đồng thời cùng một service ở native và Compose trên cùng cổng.
+
+## 11. Giới hạn V1 đã biết
+
+1. **AI chưa đủ điều kiện production.** Đợt đánh giá R8 đạt Recall@5 nhưng citation
+   precision chỉ 50% và có timeout/sai định dạng. Xem
+   [rủi ro sau R8](R8_POST_EVALUATION_RISK.md). Không quảng bá mức tin cậy 99% hiện tại.
+2. **Trang `/ai` vẫn là mock.** Luồng Backend thật chỉ được nối tại
+   `/companies/{MÃ_CỔ_PHIẾU}/ai`.
+3. **Đăng nhập/đăng ký Frontend là demo.** Auth và Admin API của Backend là thật nhưng
+   UI chưa dùng access token đó.
+4. **Phạm vi dữ liệu hữu hạn.** Crawler demo 10 mã; RAG PDF hiện hỗ trợ FPT, GAS, HPG,
+   HSG. Hệ thống chưa phải kho dữ liệu toàn thị trường.
+5. **Không có giá chứng khoán thời gian thực.** Không dùng câu hỏi “giá hôm nay” hoặc
+   khuyến nghị mua/bán để nghiệm thu V1.
+6. **Dữ liệu tài chính phụ thuộc VNStock.** Response có thể đổi; kỹ thuật mapping xanh
+   không thay thế đối chiếu nghiệp vụ với báo cáo công bố chính thức.
+7. **Nhận diện tin RSS dùng luật và alias.** Precision 98% chỉ được tuyên bố sau khi BA
+   hoàn thành phiếu review độc lập; bài mơ hồ phải giữ ở trạng thái chưa khớp.
+8. **PDF nằm trên filesystem.** Database chỉ giữ `fileRef`; mất thư mục seed thì citation
+   không mở được dù metadata còn tồn tại.
+9. **Backup và restore đang thủ công.** Chưa có retention, mã hóa backup hoặc lịch phục
+   hồi tự động.
+10. **Chưa có hạ tầng production hoàn chỉnh.** V1 chưa có deploy pipeline, monitoring,
+    distributed tracing, rate limiting, object storage hoặc multi-replica ingestion.
+11. **Không có conversation memory.** Mỗi câu hỏi AI được xử lý độc lập.
+12. **Container mới được build trong CI.** Máy thực hiện B9 không có Docker Engine nên
+    clean-stack runtime cần được một thành viên có Docker nghiệm thu trên Pull Request.
+
+## 12. Checklist nghiệm thu cuối cùng
+
+### 12.1. Môi trường
+
+- [ ] Checkout `develop` mới nhất và worktree sạch.
+- [ ] Tạo đúng file `.env` từ `.example`; không có secret trong Git.
+- [ ] PostgreSQL có extension `vector`.
+- [ ] Migration và seed chạy hai lần không lỗi hoặc tạo duplicate.
+- [ ] AI Service, Backend và Frontend health/startup thành công.
+
+### 12.2. Dữ liệu
+
+- [ ] Crawler FPT chạy thành công.
+- [ ] Chạy lại FPT không tạo duplicate.
+- [ ] Chạy đủ 10 mã và có summary success/failure rõ ràng.
+- [ ] Có `data_ingestion_log` thật cho VNStock/RSS.
+- [ ] RAG ingest đủ PDF đã chuẩn bị; lần hai chuyển thành `skipped`.
+- [ ] BA đối chiếu FPT, HPG, VCB ở hai kỳ gần nhất cho doanh thu, lợi nhuận sau thuế,
+      tổng nợ và ROE với nguồn công bố; ghi ngày, URL và pass/fail.
+
+### 12.3. Public API và giao diện
+
+- [ ] Company list/profile đọc dữ liệu PostgreSQL thật.
+- [ ] Financial API trả kỳ mới nhất và lọc đúng năm/quý.
+- [ ] News trả URL thật và tên nguồn.
+- [ ] Documents/citations không lẫn doanh nghiệp.
+- [ ] Frontend tìm và mở được trang FPT từ đầu đến cuối.
+- [ ] Người nghiệm thu không nhầm các trang mock là dữ liệu Backend thật.
+
+### 12.4. AI và citation
+
+- [ ] Thiếu API key không làm Company/Financial API chết; AI báo lỗi rõ ràng.
+- [ ] Có key thì request đi qua Backend, retrieval và provider thật.
+- [ ] Backend chỉ dựng citation từ evidence hợp lệ trong database.
+- [ ] Mở được PDF đúng trang và excerpt trực tiếp chứng minh câu trả lời.
+- [ ] Câu ngoài dữ liệu trả không tự tin và không bịa citation.
+- [ ] Không coi AI là production-ready khi gate trong `R8_POST_EVALUATION_RISK.md` chưa đạt.
+
+### 12.5. Chất lượng và vận hành
+
+- [ ] Sáu release gate B8 chạy xanh trên Pull Request.
+- [ ] PostgreSQL E2E xanh.
+- [ ] Health báo đúng khi DB up và trả `503` khi DB down.
+- [ ] Admin login qua Backend và endpoint bảo vệ hoạt động.
+- [ ] Tạo được database restore riêng từ bản backup.
+- [ ] Thành viên không viết Backend làm theo runbook mà không phải sửa code.
+
+## 13. Tài liệu chuyên sâu
+
+- [Cấu hình, health và lỗi công khai của Backend](BACKEND_OPERATIONS.md)
+- [Backend E2E với PostgreSQL thật](BACKEND_REAL_DATA_E2E.md)
+- [Release gate và branch protection](CI_RELEASE_GATES.md)
+- [Vận hành RAG](RAG_OPERATIONS_RUNBOOK.md)
+- [Giới hạn và mã lỗi RAG](RAG_KNOWN_LIMITATIONS.md)
+- [Vận hành RSS](RSS_NEWS_OPERATIONS_RUNBOOK.md)
+- [Tiền xử lý OCR](OCR_PREPROCESSING.md)
+- [API contract](API_CONTRACT.md)
