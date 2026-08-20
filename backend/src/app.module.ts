@@ -12,11 +12,13 @@ import { FinancialsModule } from './financials/financials.module';
 import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './database/database.module';
 import { ApiExceptionFilter } from './common/api-exception.filter';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
     DatabaseModule,
     AuthModule,
+    ChatModule,
     HealthModule,
     CompaniesModule,
     FinancialsModule,

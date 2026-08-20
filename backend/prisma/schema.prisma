@@ -416,6 +416,7 @@ model AiConversation {
 
   messages AiMessage[]
 
+  @@index([userId, startedAt], map: "idx_ai_conversation_user_started")
   @@map("ai_conversation")
 }
 
@@ -433,7 +434,7 @@ model AiMessage {
 
   citations AiMessageCitation[]
 
-  @@index([conversationId], map: "idx_ai_message_conversation")
+  @@index([conversationId, createdAt], map: "idx_ai_message_conversation_created")
   @@map("ai_message")
 }
 
