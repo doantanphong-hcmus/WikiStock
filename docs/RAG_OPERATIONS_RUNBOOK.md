@@ -69,6 +69,7 @@ Khi chạy online, nạp secret bằng secret store của môi trường hoặc 
 ```dotenv
 AI_PROVIDER=gateway
 AI_API_BASE_URL=https://claude.zunef.com/v1/ai
+AI_AUTH_SCHEME=bearer
 AI_MODEL=claude-sonnet-4-6
 ```
 

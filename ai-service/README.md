@@ -48,6 +48,7 @@ cd ai-service
 | `AI_PROVIDER` | `demo` | Chọn `demo` hoặc `gateway` |
 | `AI_API_BASE_URL` | Gateway Zunef | Base URL tương thích Anthropic Messages |
 | `AI_API_KEY` | Rỗng | Client API key; không được commit |
+| `AI_AUTH_SCHEME` | `x-api-key` nếu không cấu hình | Đặt `bearer` cho credential demo đã xác minh ở D0 |
 | `AI_MODEL` | `claude-sonnet-4-6` | Model provider |
 | `AI_CONNECT_TIMEOUT_SECONDS` | `5` | Thời gian chờ thiết lập kết nối |
 | `AI_READ_TIMEOUT_SECONDS` | `45` | Thời gian chờ provider trả nội dung |
@@ -64,11 +65,13 @@ Client API trực tiếp sử dụng:
 | Base URL | `https://claude.zunef.com/v1/ai` |
 | Danh sách model | `GET /models` |
 | Sinh nội dung | `POST /messages` |
-| Xác thực | `x-api-key` với `AI_API_KEY` |
+| Xác thực đã chạy thành công ở D0 | `Authorization: Bearer` với `AI_API_KEY` |
 | Kiểu request | Anthropic Messages-compatible |
 | Embedding | Không dùng gateway; V1 dùng `BAAI/bge-m3` local |
 
 Không nhầm Client API key với token dành riêng cho Claude Code. Không đưa key vào command, fixture, log hoặc Git. Nếu key từng xuất hiện trong nơi được chia sẻ, phải yêu cầu nhà cung cấp xoay khóa.
+
+Gateway có native SSE với `stream: true`; event thực tế, auth scheme và lệnh probe được ghi tại [Hợp đồng streaming AI](../docs/AI_STREAMING_CONTRACT.md).
 
 ## Lệnh ingest
 
