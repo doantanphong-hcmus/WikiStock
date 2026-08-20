@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getCurrentUser, type AuthUser } from "@/features/auth/api";
+import { getAccessToken } from "@/lib/api";
 
 const fontSans = "'Inter', 'Roboto', 'Open Sans', 'Segoe UI', sans-serif";
 const fontBody = "'Lexend', 'Poppins', sans-serif";
@@ -29,21 +31,24 @@ export default function AIChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<{ name?: string; email: string; plan?: string } | null>(null);
+  const [user, setUser] = useState<(AuthUser & { plan: string }) | null>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const storedUser = sessionStorage.getItem("wikistock_user");
-      if (storedUser) {
-        try {
-          setUser({ ...JSON.parse(storedUser), plan: "Free" });
-        } catch {
-          setUser(null);
-        }
-      }
-    }, 0);
+    let isMounted = true;
 
-    return () => window.clearTimeout(timer);
+    if (getAccessToken()) {
+      void getCurrentUser()
+        .then((currentUser) => {
+          if (isMounted) setUser({ ...currentUser, plan: "Free" });
+        })
+        .catch(() => {
+          if (isMounted) setUser(null);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSend = async () => {
@@ -164,11 +169,11 @@ export default function AIChatPage() {
                     fontFamily: fontSans,
                   }}
                 >
-                  {getInitials(user.name, user.email)}
+                  {getInitials(user.fullName ?? undefined, user.email)}
                 </div>
                 <div>
                   <p className="text-sm font-medium" style={{ fontFamily: fontBody, color: "#111827" }}>
-                    {user.name || user.email.split("@")[0]}
+                    {user.fullName || user.email.split("@")[0]}
                   </p>
                   <span
                     className="text-xs"

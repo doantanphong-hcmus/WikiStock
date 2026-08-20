@@ -1,6 +1,22 @@
 import { API_BASE_URL } from "./env";
 import type { ApiResponse } from "./types";
 
+const AUTH_TOKEN_KEY = "wikistock_access_token";
+
+export function getAccessToken() {
+  return typeof window === "undefined"
+    ? null
+    : sessionStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setAccessToken(token: string) {
+  sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+export function clearAccessToken() {
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -23,12 +39,9 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  // Add auth token if available
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
+  const token = getAccessToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(buildUrl(path), {
@@ -37,10 +50,10 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     cache: init.cache ?? "no-store",
   });
 
-  // Handle 401 Unauthorized
-  if (response.status === 401) {
+  // Chỉ chuyển trang khi phiên hiện tại hết hạn; lỗi đăng nhập vẫn được trả về form.
+  if (response.status === 401 && token) {
+    clearAccessToken();
     if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token");
       window.location.href = "/login";
     }
     throw new ApiError("Unauthorized", 401);

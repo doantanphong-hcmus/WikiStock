@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getCurrentUser, type AuthUser } from "@/features/auth/api";
+import { clearAccessToken, getAccessToken } from "@/lib/api";
 
 const navLinks = [
   { href: "/", label: "Trang chủ" },
@@ -14,15 +16,9 @@ const navLinks = [
 const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
 const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
 
-interface User {
-  email: string;
-  name?: string;
-  loggedIn: boolean;
-}
-
 export function AppHeader() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarClosing, setIsSidebarClosing] = useState(false);
@@ -36,27 +32,28 @@ export function AppHeader() {
   };
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const storedUser = sessionStorage.getItem("wikistock_user");
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch {
-          setUser(null);
-        }
-      }
-    }, 0);
+    let isMounted = true;
 
-    return () => window.clearTimeout(timer);
+    if (getAccessToken()) {
+      void getCurrentUser()
+        .then((currentUser) => {
+          if (isMounted) setUser(currentUser);
+        })
+        .catch(() => {
+          if (isMounted) setUser(null);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("wikistock_user");
-    }
+    clearAccessToken();
     setUser(null);
     setIsMenuOpen(false);
-    router.push("/");
+    router.replace("/login");
   };
 
   return (
@@ -147,7 +144,7 @@ export function AppHeader() {
           </nav>
 
           <div className="flex items-center gap-3 pr-2">
-            {user?.loggedIn ? (
+            {user ? (
               // User is logged in
               <div className="relative">
                 <button
@@ -159,15 +156,15 @@ export function AppHeader() {
                     className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
                     style={{ background: "#FFFFFF", color: "#0F172A" }}
                   >
-                    {user.name
-                      ? user.name.charAt(0).toUpperCase()
+                    {user.fullName
+                      ? user.fullName.charAt(0).toUpperCase()
                       : user.email.charAt(0).toUpperCase()}
                   </div>
                   <span
                     className="hidden text-sm md:block"
                     style={{ color: "#CBD5E1" }}
                   >
-                    {user.name || user.email.split("@")[0]}
+                    {user.fullName || user.email.split("@")[0]}
                   </span>
                   <svg
                     width="16"
