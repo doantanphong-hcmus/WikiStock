@@ -63,10 +63,11 @@ export class ChatStreamService {
       throw new HttpException('Could not resolve a company', 422);
     }
 
-    for (let offset = 0; offset < answer.length; offset += DELTA_SIZE) {
+    const characters = Array.from(answer);
+    for (let offset = 0; offset < characters.length; offset += DELTA_SIZE) {
       this.throwIfCancelled(signal);
-      sendDelta(answer.slice(offset, offset + DELTA_SIZE));
-      if (offset + DELTA_SIZE < answer.length) {
+      sendDelta(characters.slice(offset, offset + DELTA_SIZE).join(''));
+      if (offset + DELTA_SIZE < characters.length) {
         await delay(DELTA_DELAY_MS, undefined, { signal }).catch((error) => {
           if (signal.aborted) throw new ChatStreamCancelledError();
           throw error;

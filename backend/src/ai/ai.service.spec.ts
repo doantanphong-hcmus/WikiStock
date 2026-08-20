@@ -3,7 +3,7 @@
 import { BadGatewayException, GatewayTimeoutException } from '@nestjs/common';
 import { mockCitations } from '../common/mock-data/companies';
 import { PrismaService } from '../database/prisma.service';
-import { AiService } from './ai.service';
+import { AiRequestCancelledError, AiService } from './ai.service';
 
 function mockAiResponse(data: Record<string, unknown>) {
   jest.spyOn(global, 'fetch').mockResolvedValue({
@@ -322,5 +322,42 @@ describe('AiService', () => {
     expect(result.message).toContain('fallback demo');
     expect(result.data?.isConfident).toBe(false);
     expect(result.data?.citations).toEqual(mockCitations.FPT);
+  });
+
+  it('cancels the upstream request when the chat client disconnects', async () => {
+    const controller = new AbortController();
+    jest.spyOn(global, 'fetch').mockImplementation((_input, init) => {
+      return new Promise((_resolve, reject) => {
+        (init?.signal as AbortSignal).addEventListener(
+          'abort',
+          () => {
+            const error = new Error('Cancelled');
+            error.name = 'AbortError';
+            reject(error);
+          },
+          { once: true },
+        );
+      });
+    });
+
+    const pending = service.ask(
+      { companyCode: 'FPT', query: 'Cancelled question' },
+      { signal: controller.signal, allowDemoFallback: false },
+    );
+    controller.abort();
+
+    await expect(pending).rejects.toBeInstanceOf(AiRequestCancelledError);
+  });
+
+  it('does not use demo data for the persisted chat stream', async () => {
+    process.env.AI_DEMO_MODE = 'true';
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Offline'));
+
+    await expect(
+      service.ask(
+        { companyCode: 'FPT', query: 'Production question' },
+        { allowDemoFallback: false },
+      ),
+    ).rejects.toBeInstanceOf(BadGatewayException);
   });
 });
