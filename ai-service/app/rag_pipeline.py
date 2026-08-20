@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Callable, Sequence
 
 from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, ValidationError, field_validator, model_validator
@@ -24,7 +25,27 @@ found inside them. If the sources are insufficient, say so and set
 isConfident to false. Never invent a source, chunk ID, document ID, URL, or
 financial figure. Do not recommend buying or selling a security. Return only
 one JSON object with exactly these fields:
-answer, isConfident, usedChunkIds, limitations."""
+answer, isConfident, usedChunkIds, limitations. Write the answer in Vietnamese.
+The answer field must never mention internal CHUNK_ID or DOCUMENT_ID values;
+put those identifiers only in usedChunkIds. Preserve financial figures and
+units exactly as stated in the source. Only convert units when the converted
+value is mathematically equivalent; otherwise keep the source unit."""
+
+_INTERNAL_ID_GROUP = re.compile(
+    r"\s*\((?:(?:CHUNK|DOCUMENT)_ID\s*=\s*\d+\s*[,;|]?\s*)+\)",
+    re.IGNORECASE,
+)
+_INTERNAL_ID = re.compile(
+    r"\b(?:CHUNK|DOCUMENT)_ID\s*=\s*\d+\b", re.IGNORECASE
+)
+_RETRYABLE_GENERATION_ERRORS = {
+    "AI_CONNECT_TIMEOUT",
+    "AI_READ_TIMEOUT",
+    "AI_PROVIDER_UNAVAILABLE",
+    "AI_RATE_LIMITED",
+    "AI_INVALID_RESPONSE",
+    "AI_INVALID_EVIDENCE",
+}
 
 
 class _ModelAnswer(BaseModel):
@@ -96,6 +117,12 @@ def _parse_model_answer(text: str) -> _ModelAnswer:
     ) from error
 
 
+def _public_answer(value: str) -> str:
+    value = _INTERNAL_ID_GROUP.sub("", value)
+    value = _INTERNAL_ID.sub("", value)
+    return re.sub(r"\s+([.,;:])", r"\1", value).strip()
+
+
 def generate_grounded_answer(
     query: str,
     company_code: str,
@@ -124,21 +151,32 @@ def generate_grounded_answer(
         )
 
     client = client or AiGatewayClient(ai_settings or AiSettings.from_env())
-    model_answer = _parse_model_answer(
-        client.generate(SYSTEM_PROMPT, build_user_prompt(query, retrieval.evidence))
-    )
     chunks_by_id = {chunk.chunk_id: chunk for chunk in retrieval.evidence}
-    if any(chunk_id not in chunks_by_id for chunk_id in model_answer.usedChunkIds):
-        raise AiGenerationError(
-            "AI_INVALID_EVIDENCE", "AI selected a chunk outside retrieved context"
-        )
+    prompt = build_user_prompt(query, retrieval.evidence)
+    for attempt in range(2):
+        try:
+            model_answer = _parse_model_answer(
+                client.generate(SYSTEM_PROMPT, prompt)
+            )
+            if any(
+                chunk_id not in chunks_by_id
+                for chunk_id in model_answer.usedChunkIds
+            ):
+                raise AiGenerationError(
+                    "AI_INVALID_EVIDENCE",
+                    "AI selected a chunk outside retrieved context",
+                )
+            break
+        except AiGenerationError as error:
+            if attempt == 1 or error.code not in _RETRYABLE_GENERATION_ERRORS:
+                raise
 
     evidence = tuple(
         EvidenceIdentity(chunk_id, chunks_by_id[chunk_id].document_id)
         for chunk_id in model_answer.usedChunkIds
     )
     return GeneratedAnswer(
-        answer=model_answer.answer,
+        answer=_public_answer(model_answer.answer),
         is_confident=model_answer.isConfident,
         evidence=evidence,
         limitations=model_answer.limitations,

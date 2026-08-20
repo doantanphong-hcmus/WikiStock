@@ -30,13 +30,13 @@ def retrieval(*chunks: RetrievedChunk) -> RetrievalResult:
 
 
 class FakeClient:
-    def __init__(self, response: str) -> None:
-        self.response = response
+    def __init__(self, response: str | list[str]) -> None:
+        self.responses = response if isinstance(response, list) else [response, response]
         self.calls: list[tuple[str, str]] = []
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         self.calls.append((system_prompt, user_prompt))
-        return self.response
+        return self.responses[min(len(self.calls) - 1, len(self.responses) - 1)]
 
 
 class RagPipelineTests(unittest.TestCase):
@@ -58,6 +58,23 @@ class RagPipelineTests(unittest.TestCase):
         self.assertTrue(answer.is_confident)
         self.assertEqual(answer.evidence[0].chunk_id, 123)
         self.assertEqual(answer.evidence[0].document_id, 8)
+
+    def test_retries_one_invalid_response_and_hides_internal_ids(self) -> None:
+        client = FakeClient(
+            [
+                "not json",
+                '{"answer":"Doanh thu là 10 tỷ đồng (CHUNK_ID=123).",'
+                '"isConfident":true,"usedChunkIds":[123],"limitations":null}',
+            ]
+        )
+        answer = generate_grounded_answer(
+            "Doanh thu thế nào?",
+            "FPT",
+            retriever=lambda *args, **kwargs: retrieval(chunk()),
+            client=client,  # type: ignore[arg-type]
+        )
+        self.assertEqual(len(client.calls), 2)
+        self.assertEqual(answer.answer, "Doanh thu là 10 tỷ đồng.")
 
     def test_accepts_json_after_provider_preamble(self) -> None:
         answer, _ = self.run_with(
