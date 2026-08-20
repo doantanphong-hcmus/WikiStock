@@ -53,6 +53,14 @@ const suggestedQuestions = [
   "Tóm tắt tình hình tài sản và nợ phải trả của FPT.",
 ];
 
+const analysisSteps = [
+  "Đang xác định doanh nghiệp trong câu hỏi...",
+  "Đang tìm dữ liệu tài chính liên quan...",
+  "Đang đối chiếu các số liệu quan trọng...",
+  "Đang kiểm tra nguồn dẫn chứng...",
+  "Đang tổng hợp câu trả lời...",
+];
+
 function toUiMessage(message: ChatMessage): UiMessage {
   return {
     id: `message-${message.messageId}`,
@@ -99,7 +107,13 @@ function streamErrorMessage(error: unknown) {
     if (error.code === "AI_INVALID_EVIDENCE") {
       return "Nguồn dữ liệu chưa vượt qua bước kiểm chứng. Câu trả lời không được hiển thị.";
     }
-    return error.message;
+    if (error.code === "AI_SERVICE_UNAVAILABLE") {
+      return "Hệ thống AI hiện không khả dụng. Vui lòng thử lại sau.";
+    }
+    if (error.code === "AI_INVALID_RESPONSE") {
+      return "AI trả về dữ liệu không hợp lệ nên WikiStock đã từ chối câu trả lời.";
+    }
+    return "Không thể hoàn tất câu trả lời. Vui lòng thử lại.";
   }
   return "Không thể kết nối tới hệ thống AI. Vui lòng thử lại.";
 }
@@ -120,6 +134,7 @@ export default function AIChatPage() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [failedRequest, setFailedRequest] = useState<FailedRequest | null>(null);
+  const [analysisStepIndex, setAnalysisStepIndex] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeRequestRef = useRef<string | null>(null);
   const selectedConversationRef = useRef<number | null>(null);
@@ -188,12 +203,21 @@ export default function AIChatPage() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (!isStreaming) return;
+    const timer = window.setInterval(() => {
+      setAnalysisStepIndex((current) => (current + 1) % analysisSteps.length);
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [isStreaming]);
+
   function cancelForNavigation() {
     activeRequestRef.current = null;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsStreaming(false);
     setFailedRequest(null);
+    setAnalysisStepIndex(0);
   }
 
   async function refreshConversations() {
@@ -569,9 +593,22 @@ export default function AIChatPage() {
                           ) : null}
                         </p>
                       ) : message.role === "assistant" && message.status === "sending" ? (
-                        <div className="flex items-center gap-2 text-sm text-gray-500" role="status">
-                          <span className="h-2 w-2 animate-pulse rounded-full bg-gray-800" />
-                          Đang phân tích dữ liệu và kiểm tra nguồn...
+                        <div
+                          className="flex min-w-72 items-center gap-4 py-1"
+                          role="status"
+                          aria-live="polite"
+                        >
+                          <span className="flex items-center gap-1.5" aria-hidden="true">
+                            <span className="chat-thinking-dot" />
+                            <span className="chat-thinking-dot" />
+                            <span className="chat-thinking-dot" />
+                          </span>
+                          <span
+                            key={analysisStepIndex}
+                            className="chat-thinking-text text-sm text-gray-600"
+                          >
+                            {analysisSteps[analysisStepIndex]}
+                          </span>
                         </div>
                       ) : null}
 
