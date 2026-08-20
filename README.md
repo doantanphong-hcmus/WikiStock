@@ -71,6 +71,7 @@ native đã sẵn sàng. Làm theo [quy trình native Windows](docs/BACKEND_V1_R
 
 ## Tài liệu vận hành
 
+- [Checklist demo chatbot cho khách hàng](docs/CHAT_CUSTOMER_DEMO_CHECKLIST.md)
 - [Runbook dựng, kiểm tra và demo Backend V1](docs/BACKEND_V1_RUNBOOK.md)
 - [Cổng kiểm tra trước khi merge và phát hành](docs/CI_RELEASE_GATES.md)
 - [Runbook RAG từ database sạch](docs/RAG_OPERATIONS_RUNBOOK.md)

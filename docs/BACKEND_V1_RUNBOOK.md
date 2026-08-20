@@ -394,9 +394,8 @@ Invoke-RestMethod -Headers $headers http://localhost:3001/api/v1/admin/companies
 Remove-Item Env:ADMIN_EMAIL, Env:ADMIN_PASSWORD, Env:ADMIN_FULL_NAME -ErrorAction SilentlyContinue
 ```
 
-Trang đăng nhập Frontend hiện vẫn là giao diện demo và chưa gọi Auth API. Vì vậy phải
-dùng request trên để nghiệm thu Admin; không dùng việc Frontend chấp nhận email làm
-bằng chứng xác thực Backend hoạt động.
+Trang đăng nhập và đăng ký dành cho khách hàng đã gọi Auth API thật. Request trên vẫn
+được giữ để nghiệm thu riêng quyền quản trị và không phụ thuộc giao diện.
 
 ## 7. Kiểm thử nhanh và đầy đủ
 
@@ -512,8 +511,10 @@ CI thực hiện các gate tương đương trên môi trường sạch. Xem
 5. Mở `/companies/FPT/ai`; với `AI_PROVIDER=demo`, kết quả phải ghi rõ không tự tin,
    không có citation và không được trình bày như phân tích tài chính thật.
 
-Trang `/ai` là giao diện chatbot mẫu chưa nối Backend. Không dùng trang đó để chứng
-minh RAG hoạt động.
+Trang `/ai` đã nối Auth, lịch sử hội thoại và luồng streaming của Backend. Chỉ dùng
+trang này để chứng minh RAG khi `AI_PROVIDER=gateway`, `AI_DEMO_MODE=false`, dữ liệu
+đã ingest và nguồn dẫn mở được. Xem
+[checklist demo chatbot](CHAT_CUSTOMER_DEMO_CHECKLIST.md) trước khi bàn giao.
 
 ### 8.2. Chứng minh thiếu API key không làm hỏng dữ liệu nền
 
@@ -731,10 +732,10 @@ Không chạy đồng thời cùng một service ở native và Compose trên c�
 1. **AI chưa đủ điều kiện production.** Đợt đánh giá R8 đạt Recall@5 nhưng citation
    precision chỉ 50% và có timeout/sai định dạng. Xem
    [rủi ro sau R8](R8_POST_EVALUATION_RISK.md). Không quảng bá mức tin cậy 99% hiện tại.
-2. **Trang `/ai` vẫn là mock.** Luồng Backend thật chỉ được nối tại
-   `/companies/{MÃ_CỔ_PHIẾU}/ai`.
-3. **Đăng nhập/đăng ký Frontend là demo.** Auth và Admin API của Backend là thật nhưng
-   UI chưa dùng access token đó.
+2. **Streaming chưa giảm thời gian chờ đoạn đầu.** Backend chỉ phát từng đoạn sau khi
+   AI Service đã hoàn tất câu trả lời và kiểm chứng nguồn.
+3. **Phiên đăng nhập nằm ở `sessionStorage`.** Lịch sử được lưu trong PostgreSQL nhưng
+   người dùng phải đăng nhập lại sau khi đóng phiên trình duyệt.
 4. **Phạm vi dữ liệu hữu hạn.** Crawler demo 10 mã; RAG PDF hiện hỗ trợ FPT, GAS, HPG,
    HSG. Hệ thống chưa phải kho dữ liệu toàn thị trường.
 5. **Không có giá chứng khoán thời gian thực.** Không dùng câu hỏi “giá hôm nay” hoặc
