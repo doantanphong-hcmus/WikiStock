@@ -140,7 +140,7 @@ export default function AIChatPage() {
 
     async function bootstrap() {
       if (!getAccessToken()) {
-        router.replace("/login");
+        router.replace("/login?next=%2Fai");
         return;
       }
 
