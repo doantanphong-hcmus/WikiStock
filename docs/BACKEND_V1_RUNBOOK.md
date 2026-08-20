@@ -752,6 +752,10 @@ Không chạy đồng thời cùng một service ở native và Compose trên c�
 11. **Không có conversation memory.** Mỗi câu hỏi AI được xử lý độc lập.
 12. **Container mới được build trong CI.** Máy thực hiện B9 không có Docker Engine nên
     clean-stack runtime cần được một thành viên có Docker nghiệm thu trên Pull Request.
+13. **Dependency audit chưa sạch.** Lần audit ở B7 ghi nhận 4 cảnh báo mức cao trong
+    dependency production và 6 cảnh báo mức cao nếu tính cả toolchain. Không chạy
+    `npm audit fix --force` vì đề xuất hiện tại gây thay đổi Prisma không tương thích;
+    không mô tả V1 là đã đạt chuẩn bảo mật production.
 
 ## 12. Checklist nghiệm thu cuối cùng
 
