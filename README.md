@@ -21,10 +21,6 @@
   <img src="https://img.shields.io/badge/pgvector-vector%20search-7C3AED?style=for-the-badge&logo=postgresql&logoColor=white" alt="pgvector" />
 </p>
 
-<p align="center">
-  <sub>ATTACKER 2026 · WikiStock hiện được phát triển và tích hợp trên nhánh <a href="https://github.com/doantanphong-hcmus/WikiStock/tree/develop"><code>develop</code></a>.</sub>
-</p>
-
 ## Lời cảm ơn
 
 <table align="center">
