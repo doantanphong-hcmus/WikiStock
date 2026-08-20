@@ -36,6 +36,16 @@ npm run db:seed
 npm run db:check
 ```
 
+Kiểm thử lát cắt Backend bằng PostgreSQL test riêng:
+
+```powershell
+$env:TEST_DATABASE_URL="postgresql://app_user:app_password@localhost:55432/wikistock_e2e"
+npm run test:e2e:real-data
+```
+
+Quy trình đầy đủ và smoke test live được ghi tại
+[`docs/BACKEND_REAL_DATA_E2E.md`](../docs/BACKEND_REAL_DATA_E2E.md).
+
 Do not use `prisma db push` for WikiStock databases. It does not own the custom
 pgvector column or the database-only validation constraints.
 
