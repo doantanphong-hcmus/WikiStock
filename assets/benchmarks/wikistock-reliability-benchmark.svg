@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">WikiStock reliability benchmark</title>
+  <desc id="desc">Ba phép đo an toàn đạt 100 phần trăm và thời gian truy xuất p95 là 236,42 mili giây so với ngân sách 300 mili giây.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426" />
+      <stop offset="1" stop-color="#0b1f35" />
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#10b981" />
+      <stop offset="1" stop-color="#34d399" />
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0284c7" />
+      <stop offset="1" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed" />
+      <stop offset="1" stop-color="#a78bfa" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-100%" width="140%" height="300%">
+      <feGaussianBlur stdDeviation="7" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="650" rx="22" fill="url(#background)" />
+  <circle cx="1090" cy="40" r="180" fill="#0ea5e9" opacity="0.06" />
+  <circle cx="90" cy="620" r="150" fill="#22c55e" opacity="0.05" />
+
+  <text x="64" y="68" fill="#f8fafc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="29" font-weight="700">WIKISTOCK — BENCHMARK ĐỘ TIN CẬY ĐÃ XÁC MINH</text>
+  <text x="64" y="101" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">Kết quả đo có thể tái lập · chỉ hiển thị các lớp đã đạt ngưỡng · không phải điểm tổng thể của AI</text>
+
+  <text x="64" y="157" fill="#cbd5e1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600">ĐỘ CHÍNH XÁC / TỶ LỆ ĐẠT</text>
+  <line x1="64" y1="174" x2="1136" y2="174" stroke="#334155" />
+
+  <text x="64" y="221" fill="#f8fafc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Ghép tin RSS với doanh nghiệp</text>
+  <text x="64" y="244" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">Exact-set accuracy · 43/43 tình huống · 10 doanh nghiệp</text>
+  <rect x="470" y="202" width="570" height="42" rx="9" fill="#1e293b" />
+  <rect x="470" y="202" width="570" height="42" rx="9" fill="url(#green)" filter="url(#glow)" />
+  <text x="1062" y="231" fill="#6ee7b7" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">100%</text>
+
+  <text x="64" y="303" fill="#f8fafc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Loại bỏ ngữ cảnh gây nhầm mã</text>
+  <text x="64" y="326" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">False-positive rejection · 11/11 tình huống gây nhiễu</text>
+  <rect x="470" y="284" width="570" height="42" rx="9" fill="#1e293b" />
+  <rect x="470" y="284" width="570" height="42" rx="9" fill="url(#blue)" filter="url(#glow)" />
+  <text x="1062" y="313" fill="#7dd3fc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">100%</text>
+
+  <text x="64" y="385" fill="#f8fafc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Từ chối an toàn khi thiếu căn cứ</text>
+  <text x="64" y="408" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">Live provider · 4/4 câu sai kỳ hoặc ngoài phạm vi</text>
+  <rect x="470" y="366" width="570" height="42" rx="9" fill="#1e293b" />
+  <rect x="470" y="366" width="570" height="42" rx="9" fill="url(#purple)" filter="url(#glow)" />
+  <text x="1062" y="395" fill="#c4b5fd" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">100%</text>
+
+  <text x="64" y="474" fill="#cbd5e1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600">TỐC ĐỘ TRUY XUẤT BẰNG CHỨNG — THẤP HƠN LÀ TỐT HƠN</text>
+  <line x1="64" y1="491" x2="1136" y2="491" stroke="#334155" />
+
+  <text x="64" y="540" fill="#f8fafc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Retrieval p95 · 19 truy vấn warm</text>
+  <rect x="390" y="516" width="600" height="46" rx="10" fill="#1e293b" />
+  <rect x="390" y="516" width="473" height="46" rx="10" fill="url(#blue)" />
+  <line x1="990" y1="507" x2="990" y2="571" stroke="#f59e0b" stroke-width="3" />
+  <text x="875" y="545" fill="#e0f2fe" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">236,42 ms</text>
+  <text x="1006" y="535" fill="#fbbf24" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">NGƯỠNG</text>
+  <text x="1006" y="556" fill="#fde68a" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">300 ms</text>
+
+  <rect x="390" y="584" width="215" height="34" rx="17" fill="#064e3b" />
+  <text x="410" y="607" fill="#6ee7b7" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">✓ 21,2% dưới ngân sách</text>
+  <text x="1136" y="612" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12">RSS: 21/08/2026 · RAG live: 16/08/2026</text>
+</svg>

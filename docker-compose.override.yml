@@ -1,0 +1,11 @@
+# Development override - opens debug ports
+# Auto-merged by Docker Compose when running `docker compose up`
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  ai-service:
+    ports:
+      - "8000:8000"

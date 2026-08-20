@@ -1,0 +1,307 @@
+{
+  "contract_version": 1,
+  "demo_tickers": ["FPT", "GAS", "HPG", "HSG", "MWG", "SSI", "VCB", "VCG", "VIC", "VNM"],
+  "cases": [
+    {
+      "id": "fpt-strong-title",
+      "title": "Tập đoàn FPT mở rộng trung tâm dữ liệu tại Việt Nam",
+      "summary": null,
+      "expected_tickers": ["FPT"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "fpt-strong-summary",
+      "title": "Doanh nghiệp công nghệ mở rộng thị trường Nhật Bản",
+      "summary": "FPT Software công bố kế hoạch tuyển dụng mới.",
+      "expected_tickers": ["FPT"],
+      "reason": "Bí danh mạnh nằm trong tóm tắt"
+    },
+    {
+      "id": "fpt-ticker-context",
+      "title": "Cổ phiếu FPT tăng sau báo cáo lợi nhuận quý",
+      "summary": null,
+      "expected_tickers": ["FPT"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh tài chính"
+    },
+    {
+      "id": "fpt-lowercase-no-context",
+      "title": "Tệp định dạng fpt được dùng trong bài thực hành",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Chuỗi viết thường không phải bí danh doanh nghiệp"
+    },
+    {
+      "id": "gas-strong-title",
+      "title": "PV GAS khởi công kho chứa mới",
+      "summary": null,
+      "expected_tickers": ["GAS"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "gas-strong-summary",
+      "title": "Doanh nghiệp năng lượng hoàn thành kế hoạch năm",
+      "summary": "Tổng công ty Khí Việt Nam ghi nhận sản lượng tăng.",
+      "expected_tickers": ["GAS"],
+      "reason": "Tên pháp lý nằm trong tóm tắt"
+    },
+    {
+      "id": "gas-ticker-context",
+      "title": "Mã GAS dẫn đầu nhóm cổ phiếu năng lượng",
+      "summary": null,
+      "expected_tickers": ["GAS"],
+      "reason": "Mã viết hoa đi cùng từ khóa mã và cổ phiếu"
+    },
+    {
+      "id": "gas-common-word",
+      "title": "Giá gas bán lẻ giảm trong tháng này",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Từ gas thông thường không chỉ doanh nghiệp"
+    },
+    {
+      "id": "hpg-strong-title",
+      "title": "Tập đoàn Hòa Phát nâng công suất sản xuất thép",
+      "summary": null,
+      "expected_tickers": ["HPG"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "hpg-strong-summary",
+      "title": "Nhà sản xuất thép công bố dự án mới",
+      "summary": "Hòa Phát dự kiến vận hành dây chuyền trong quý tới.",
+      "expected_tickers": ["HPG"],
+      "reason": "Bí danh mạnh nằm trong tóm tắt"
+    },
+    {
+      "id": "hpg-ticker-context",
+      "title": "Cổ phiếu HPG tăng thanh khoản trên HOSE",
+      "summary": null,
+      "expected_tickers": ["HPG"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh chứng khoán"
+    },
+    {
+      "id": "hpg-product-code",
+      "title": "Thiết bị mang mã HPG được đưa vào thử nghiệm",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã đứng riêng nhưng không có ngữ cảnh doanh nghiệp hoặc tài chính"
+    },
+    {
+      "id": "hsg-strong-title",
+      "title": "Tập đoàn Hoa Sen mở rộng hệ thống phân phối",
+      "summary": null,
+      "expected_tickers": ["HSG"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "hsg-strong-summary",
+      "title": "Doanh nghiệp tôn mạ cải thiện biên lợi nhuận",
+      "summary": "Hoa Sen Group cho biết nhu cầu xuất khẩu phục hồi.",
+      "expected_tickers": ["HSG"],
+      "reason": "Bí danh mạnh nằm trong tóm tắt"
+    },
+    {
+      "id": "hsg-ticker-context",
+      "title": "Mã HSG công bố doanh thu quý mới nhất",
+      "summary": null,
+      "expected_tickers": ["HSG"],
+      "reason": "Mã viết hoa đi cùng từ khóa mã và doanh thu"
+    },
+    {
+      "id": "hsg-product-code",
+      "title": "Mã màu HSG được bổ sung vào danh mục vật liệu",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã sản phẩm không phải mã cổ phiếu trong ngữ cảnh tài chính"
+    },
+    {
+      "id": "mwg-strong-title",
+      "title": "Thế Giới Di Động mở thêm chuỗi cửa hàng mới",
+      "summary": null,
+      "expected_tickers": ["MWG"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "mwg-brand-summary",
+      "title": "Chuỗi bán lẻ thực phẩm tăng tốc mở rộng",
+      "summary": "Bách Hóa Xanh đặt mục tiêu cải thiện lợi nhuận.",
+      "expected_tickers": ["MWG"],
+      "reason": "Thương hiệu con đã được duyệt nằm trong tóm tắt"
+    },
+    {
+      "id": "mwg-ticker-context",
+      "title": "Cổ phiếu MWG phản ứng sau báo cáo doanh thu",
+      "summary": null,
+      "expected_tickers": ["MWG"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh tài chính"
+    },
+    {
+      "id": "mwg-event-code",
+      "title": "Sự kiện MWG dành cho cộng đồng thiết kế",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã đứng riêng nhưng thiếu ngữ cảnh doanh nghiệp và tài chính"
+    },
+    {
+      "id": "ssi-strong-title",
+      "title": "Chứng khoán SSI công bố chiến lược phát triển mới",
+      "summary": null,
+      "expected_tickers": ["SSI"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "ssi-strong-summary",
+      "title": "Công ty chứng khoán nâng dự báo thị trường",
+      "summary": "SSI Securities đánh giá triển vọng thanh khoản tích cực.",
+      "expected_tickers": ["SSI"],
+      "reason": "Bí danh mạnh nằm trong tóm tắt"
+    },
+    {
+      "id": "ssi-ticker-context",
+      "title": "Mã SSI tăng sau đại hội cổ đông",
+      "summary": null,
+      "expected_tickers": ["SSI"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh tài chính"
+    },
+    {
+      "id": "ssi-certificate-code",
+      "title": "Chứng chỉ SSI được cấp cho hệ thống an toàn",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Cụm SSI không chỉ công ty chứng khoán"
+    },
+    {
+      "id": "vcb-strong-title",
+      "title": "Vietcombank điều chỉnh kế hoạch kinh doanh",
+      "summary": null,
+      "expected_tickers": ["VCB"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "vcb-strong-summary",
+      "title": "Ngân hàng quốc doanh tăng vốn điều lệ",
+      "summary": "Ngân hàng Ngoại thương trình phương án lên cổ đông.",
+      "expected_tickers": ["VCB"],
+      "reason": "Bí danh mạnh nằm trong tóm tắt"
+    },
+    {
+      "id": "vcb-ticker-context",
+      "title": "Cổ phiếu VCB dẫn dắt nhóm ngân hàng",
+      "summary": null,
+      "expected_tickers": ["VCB"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh chứng khoán"
+    },
+    {
+      "id": "vcb-device-code",
+      "title": "Thiết bị VCB vượt qua bài kiểm tra độ bền",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã thiết bị không phải mã cổ phiếu"
+    },
+    {
+      "id": "vcg-strong-title",
+      "title": "Vinaconex trúng gói thầu hạ tầng mới",
+      "summary": null,
+      "expected_tickers": ["VCG"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "vcg-strong-summary",
+      "title": "Tổng công ty xây dựng công bố dự án giao thông",
+      "summary": "Tổng công ty Vinaconex dự kiến khởi công trong năm nay.",
+      "expected_tickers": ["VCG"],
+      "reason": "Tên pháp lý nằm trong tóm tắt"
+    },
+    {
+      "id": "vcg-ticker-context",
+      "title": "Mã VCG tăng sau thông tin lợi nhuận",
+      "summary": null,
+      "expected_tickers": ["VCG"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh tài chính"
+    },
+    {
+      "id": "vcg-component-code",
+      "title": "Linh kiện VCG được sử dụng trong phòng thí nghiệm",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã linh kiện không phải mã cổ phiếu"
+    },
+    {
+      "id": "vic-strong-title",
+      "title": "Vingroup công bố dự án phát triển đô thị mới",
+      "summary": null,
+      "expected_tickers": ["VIC"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "vic-strong-summary",
+      "title": "Tập đoàn tư nhân mở rộng đầu tư công nghệ",
+      "summary": "Tập đoàn Vingroup sẽ tăng ngân sách nghiên cứu.",
+      "expected_tickers": ["VIC"],
+      "reason": "Bí danh mạnh nằm trong tóm tắt"
+    },
+    {
+      "id": "vic-ticker-context",
+      "title": "Cổ phiếu VIC tăng trong phiên HOSE",
+      "summary": null,
+      "expected_tickers": ["VIC"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh chứng khoán"
+    },
+    {
+      "id": "vic-standard-code",
+      "title": "Tiêu chuẩn VIC được áp dụng cho bộ dữ liệu mới",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã đứng riêng nhưng thiếu ngữ cảnh doanh nghiệp và tài chính"
+    },
+    {
+      "id": "vnm-strong-title",
+      "title": "Vinamilk đưa nhà máy mới vào vận hành",
+      "summary": null,
+      "expected_tickers": ["VNM"],
+      "reason": "Bí danh mạnh nằm trong tiêu đề"
+    },
+    {
+      "id": "vnm-strong-summary",
+      "title": "Doanh nghiệp sữa mở rộng vùng nguyên liệu",
+      "summary": "Công ty Sữa Việt Nam công bố kế hoạch đầu tư mới.",
+      "expected_tickers": ["VNM"],
+      "reason": "Tên doanh nghiệp nằm trong tóm tắt"
+    },
+    {
+      "id": "vnm-generic-dairy-phrase",
+      "title": "Nuôi bò sữa Việt Nam: Từ thách thức đến tự chủ quốc gia",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Cụm sữa Việt Nam nói về ngành sữa, không đủ để xác định Vinamilk"
+    },
+    {
+      "id": "vnm-ticker-context",
+      "title": "Mã VNM tăng sau báo cáo doanh thu",
+      "summary": null,
+      "expected_tickers": ["VNM"],
+      "reason": "Mã viết hoa đi cùng ngữ cảnh tài chính"
+    },
+    {
+      "id": "vnm-file-code",
+      "title": "Tệp VNM được nhập vào công cụ mô phỏng",
+      "summary": null,
+      "expected_tickers": [],
+      "reason": "Mã tệp không phải mã cổ phiếu"
+    },
+    {
+      "id": "multi-hpg-hsg",
+      "title": "Hòa Phát và Tập đoàn Hoa Sen cùng công bố kế hoạch xuất khẩu",
+      "summary": null,
+      "expected_tickers": ["HPG", "HSG"],
+      "reason": "Một bài có bí danh mạnh của hai doanh nghiệp"
+    },
+    {
+      "id": "multi-vic-vnm",
+      "title": "Vingroup hợp tác cùng Vinamilk trong chương trình cộng đồng",
+      "summary": null,
+      "expected_tickers": ["VIC", "VNM"],
+      "reason": "Một bài có bí danh mạnh của hai doanh nghiệp"
+    }
+  ]
+}

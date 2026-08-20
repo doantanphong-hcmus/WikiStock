@@ -1,0 +1,463 @@
+{
+  "mode": "fake_provider",
+  "fixtureCount": 20,
+  "metrics": {
+    "recallAt5": 0.8125,
+    "citationPrecision": 1.0,
+    "abstentionAccuracy": 1.0,
+    "confidenceAccuracy": 0.85,
+    "coldStartMs": 5048.42,
+    "retrievalP95Ms": 227.83
+  },
+  "thresholds": {
+    "recallAt5": 0.8,
+    "citationPrecision": 1.0,
+    "abstentionAccuracy": 1.0,
+    "retrievalP95Ms": 300
+  },
+  "passed": true,
+  "cases": [
+    {
+      "id": "fpt-q3-2025-revenue",
+      "category": "exact_fact",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        11,
+        76,
+        74,
+        33,
+        9
+      ],
+      "retrievedPages": [
+        9,
+        9,
+        8,
+        22,
+        8
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        11
+      ],
+      "durationMs": 5048.42
+    },
+    {
+      "id": "fpt-q4-2025-revenue",
+      "category": "exact_fact",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        76,
+        74,
+        11,
+        33,
+        9
+      ],
+      "retrievedPages": [
+        9,
+        8,
+        9,
+        22,
+        8
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        76
+      ],
+      "durationMs": 124.57
+    },
+    {
+      "id": "gas-q1-2026-profit",
+      "category": "exact_fact",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        207,
+        284,
+        337,
+        265,
+        261
+      ],
+      "retrievedPages": [
+        6,
+        44,
+        70,
+        34,
+        32
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        265
+      ],
+      "durationMs": 128.76
+    },
+    {
+      "id": "gas-q4-2025-profit",
+      "category": "exact_fact",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        570,
+        645,
+        512,
+        491,
+        489
+      ],
+      "retrievedPages": [
+        34,
+        71,
+        6,
+        70,
+        69
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        570
+      ],
+      "durationMs": 147.63
+    },
+    {
+      "id": "hpg-q4-2025-profit",
+      "category": "exact_fact",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        743,
+        704,
+        742,
+        750,
+        697
+      ],
+      "retrievedPages": [
+        28,
+        33,
+        27,
+        33,
+        28
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        750
+      ],
+      "durationMs": 128.87
+    },
+    {
+      "id": "hsg-q4-2025-cash",
+      "category": "exact_fact",
+      "recallHit": false,
+      "retrievedChunkIds": [
+        927,
+        915,
+        930,
+        890,
+        896
+      ],
+      "retrievedPages": [
+        31,
+        19,
+        33,
+        1,
+        6
+      ],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 122.71
+    },
+    {
+      "id": "fpt-q4-2025-revenue-comparison",
+      "category": "quarter_comparison",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        76,
+        11,
+        74,
+        9,
+        55
+      ],
+      "retrievedPages": [
+        9,
+        9,
+        8,
+        8,
+        40
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        76
+      ],
+      "durationMs": 127.87
+    },
+    {
+      "id": "gas-q3-2025-profit-comparison",
+      "category": "quarter_comparison",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        570,
+        492,
+        493,
+        417,
+        437
+      ],
+      "retrievedPages": [
+        34,
+        71,
+        71,
+        34,
+        44
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        417
+      ],
+      "durationMs": 135.18
+    },
+    {
+      "id": "hpg-q4-2025-profit-comparison",
+      "category": "quarter_comparison",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        743,
+        750,
+        704,
+        742,
+        697
+      ],
+      "retrievedPages": [
+        28,
+        33,
+        33,
+        27,
+        28
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        750
+      ],
+      "durationMs": 128.36
+    },
+    {
+      "id": "hsg-q4-2025-revenue-comparison",
+      "category": "quarter_comparison",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        890,
+        915,
+        891,
+        925,
+        892
+      ],
+      "retrievedPages": [
+        1,
+        19,
+        2,
+        29,
+        2
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        925
+      ],
+      "durationMs": 130.56
+    },
+    {
+      "id": "fpt-revenue-recognition-policy",
+      "category": "narrative",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        74,
+        11,
+        27,
+        110,
+        9
+      ],
+      "retrievedPages": [
+        8,
+        9,
+        18,
+        32,
+        8
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        27
+      ],
+      "durationMs": 124.36
+    },
+    {
+      "id": "gas-revenue-recognition-policy",
+      "category": "narrative",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        212,
+        299,
+        313,
+        290,
+        336
+      ],
+      "retrievedPages": [
+        8,
+        50,
+        56,
+        46,
+        69
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        313
+      ],
+      "durationMs": 136.1
+    },
+    {
+      "id": "hpg-inventory-policy",
+      "category": "narrative",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        675,
+        722,
+        721,
+        724,
+        674
+      ],
+      "retrievedPages": [
+        12,
+        12,
+        11,
+        13,
+        11
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        675
+      ],
+      "durationMs": 130.38
+    },
+    {
+      "id": "hsg-service-revenue-policy",
+      "category": "narrative",
+      "recallHit": false,
+      "retrievedChunkIds": [
+        891,
+        930,
+        925,
+        919,
+        893
+      ],
+      "retrievedPages": [
+        2,
+        33,
+        29,
+        23,
+        3
+      ],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 138.04
+    },
+    {
+      "id": "fpt-wrong-year-filter",
+      "category": "wrong_filter",
+      "recallHit": null,
+      "retrievedChunkIds": [],
+      "retrievedPages": [],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 227.83
+    },
+    {
+      "id": "gas-wrong-year-filter",
+      "category": "wrong_filter",
+      "recallHit": null,
+      "retrievedChunkIds": [],
+      "retrievedPages": [],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 118.98
+    },
+    {
+      "id": "fpt-live-share-price",
+      "category": "unsupported",
+      "recallHit": null,
+      "retrievedChunkIds": [
+        117,
+        51,
+        183,
+        11,
+        172
+      ],
+      "retrievedPages": [
+        37,
+        37,
+        36,
+        9,
+        27
+      ],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 130.45
+    },
+    {
+      "id": "hpg-buy-recommendation",
+      "category": "unsupported",
+      "recallHit": null,
+      "retrievedChunkIds": [
+        689,
+        761,
+        746,
+        757,
+        748
+      ],
+      "retrievedPages": [
+        21,
+        7,
+        31,
+        4,
+        32
+      ],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 137.93
+    },
+    {
+      "id": "fpt-adversarial-revenue",
+      "category": "prompt_injection",
+      "recallHit": true,
+      "retrievedChunkIds": [
+        76,
+        11,
+        74,
+        69,
+        67
+      ],
+      "retrievedPages": [
+        9,
+        9,
+        8,
+        3,
+        1
+      ],
+      "isConfident": true,
+      "citedChunkIds": [
+        76
+      ],
+      "durationMs": 126.73
+    },
+    {
+      "id": "gas-adversarial-profit",
+      "category": "prompt_injection",
+      "recallHit": false,
+      "retrievedChunkIds": [
+        207,
+        285,
+        247,
+        270,
+        283
+      ],
+      "retrievedPages": [
+        6,
+        44,
+        23,
+        36,
+        43
+      ],
+      "isConfident": false,
+      "citedChunkIds": [],
+      "durationMs": 140.7
+    }
+  ]
+}

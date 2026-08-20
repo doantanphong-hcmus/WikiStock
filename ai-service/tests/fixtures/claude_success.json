@@ -1,0 +1,23 @@
+{
+  "id": "<redacted>",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "<redacted>",
+      "signature": ""
+    },
+    {
+      "type": "text",
+      "text": "pong"
+    }
+  ],
+  "model": "claude-sonnet-4-6",
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 115,
+    "output_tokens": 25
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "contract_version": 1,
+  "verified_at": "2026-08-17",
+  "freshness_window_days": 7,
+  "sources": [
+    {
+      "source_name": "VnExpress RSS",
+      "publisher": "VnExpress",
+      "catalog_url": "https://vnexpress.net/rss",
+      "terms_url": "https://e.vnexpress.net/rss",
+      "allowed_hostnames": ["vnexpress.net"],
+      "fixture": "tests/fixtures/rss/vnexpress.xml",
+      "feeds": [
+        {
+          "category": "Kinh doanh",
+          "url": "https://vnexpress.net/rss/kinh-doanh.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T16:14:25+07:00",
+          "disabled_reason": null
+        }
+      ]
+    },
+    {
+      "source_name": "Thanh Nien RSS",
+      "publisher": "Thanh Niên",
+      "catalog_url": "https://thanhnien.vn/rss.html",
+      "terms_url": "https://thanhnien.vn/rss.html",
+      "allowed_hostnames": ["thanhnien.vn"],
+      "fixture": "tests/fixtures/rss/thanhnien.xml",
+      "feeds": [
+        {
+          "category": "Chứng khoán",
+          "url": "https://thanhnien.vn/rss/kinh-te/chung-khoan.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T15:44:00+07:00",
+          "disabled_reason": null
+        },
+        {
+          "category": "Doanh nghiệp",
+          "url": "https://thanhnien.vn/rss/kinh-te/doanh-nghiep.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T18:21:00+07:00",
+          "disabled_reason": null
+        }
+      ]
+    },
+    {
+      "source_name": "Tuoi Tre RSS",
+      "publisher": "Tuổi Trẻ",
+      "catalog_url": "https://tuoitre.vn/nld/rss.htm",
+      "terms_url": "https://tuoitre.vn/rss.htm",
+      "allowed_hostnames": ["tuoitre.vn"],
+      "fixture": "tests/fixtures/rss/tuoitre.xml",
+      "feeds": [
+        {
+          "category": "Tài chính - Chứng khoán",
+          "url": "https://tuoitre.vn/nld/rss/nld/kinh-te/tai-chinh-chung-khoan.rss",
+          "enabled": false,
+          "latest_published_at": "2026-06-30T17:28:00+07:00",
+          "disabled_reason": "Feed không có bài mới trong 7 ngày trước lần xác minh 2026-08-17"
+        }
+      ]
+    },
+    {
+      "source_name": "CafeBiz RSS",
+      "publisher": "CafeBiz",
+      "catalog_url": "https://cafebiz.vn/index.rss",
+      "terms_url": "https://cafebiz.vn/index.rss",
+      "allowed_hostnames": ["cafebiz.vn"],
+      "fixture": "tests/fixtures/rss/cafebiz.xml",
+      "feeds": [
+        {
+          "category": "Kinh doanh",
+          "url": "https://cafebiz.vn/rss/cau-chuyen-kinh-doanh.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T20:04:00+07:00",
+          "disabled_reason": null
+        },
+        {
+          "category": "Chứng khoán",
+          "url": "https://cafebiz.vn/rss/chung-khoan.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-13T10:35:00+07:00",
+          "disabled_reason": null
+        },
+        {
+          "category": "Ngân hàng - Tài chính",
+          "url": "https://cafebiz.vn/rss/ngan-hang-tai-chinh.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-13T18:14:00+07:00",
+          "disabled_reason": null
+        }
+      ]
+    },
+    {
+      "source_name": "VnEconomy RSS",
+      "publisher": "VnEconomy",
+      "catalog_url": "https://vneconomy.vn/rss.html",
+      "terms_url": "https://vneconomy.vn/rss.html",
+      "allowed_hostnames": ["vneconomy.vn"],
+      "fixture": "tests/fixtures/rss/vneconomy.xml",
+      "feeds": [
+        {
+          "category": "Chứng khoán",
+          "url": "https://vneconomy.vn/chung-khoan.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T13:25:18Z",
+          "disabled_reason": null
+        },
+        {
+          "category": "Doanh nghiệp",
+          "url": "https://vneconomy.vn/nhip-cau-doanh-nghiep.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T10:22:40Z",
+          "disabled_reason": null
+        },
+        {
+          "category": "Tài chính",
+          "url": "https://vneconomy.vn/tai-chinh.rss",
+          "enabled": true,
+          "latest_published_at": "2026-08-17T10:22:40Z",
+          "disabled_reason": null
+        }
+      ]
+    }
+  ]
+}

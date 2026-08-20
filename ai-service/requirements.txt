@@ -1,0 +1,9 @@
+fastapi
+httpx
+uvicorn
+pydantic
+python-dotenv
+PyMuPDF
+sentence-transformers
+psycopg[binary]
+pgvector
