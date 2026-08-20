@@ -87,11 +87,13 @@ describe('AuthService', () => {
       });
     });
 
-    const result = await service.register({
+    const maliciousPayload = {
       fullName: '  Nguyễn Văn An  ',
       email: ' AN@Example.com ',
       password: 'Strong123',
-    });
+      roleId: 1,
+    };
+    const result = await service.register(maliciousPayload);
 
     expect(result.statusCode).toBe(201);
     expect(result.data).toMatchObject({
