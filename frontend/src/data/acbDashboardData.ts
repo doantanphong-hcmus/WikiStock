@@ -1,7 +1,6 @@
 // ACB Dashboard Mock Data
 import type {
   DashboardCompany,
-  FinancialChartPoint,
   NewsItem,
   TimelineEvent,
   RiskIndicator,

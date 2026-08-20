@@ -85,6 +85,7 @@ cd ai-service
 
 ## Tài liệu vận hành
 
+- [Cổng kiểm tra trước khi merge và phát hành](docs/CI_RELEASE_GATES.md)
 - [Runbook RAG từ database sạch](docs/RAG_OPERATIONS_RUNBOOK.md)
 - [Giới hạn đã biết và cách xử lý lỗi](docs/RAG_KNOWN_LIMITATIONS.md)
 - [API contract](docs/API_CONTRACT.md)

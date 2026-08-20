@@ -36,8 +36,7 @@ export function AppHeader() {
   };
 
   useEffect(() => {
-    // Check for logged in user
-    if (typeof window !== "undefined") {
+    const timer = window.setTimeout(() => {
       const storedUser = sessionStorage.getItem("wikistock_user");
       if (storedUser) {
         try {
@@ -46,7 +45,9 @@ export function AppHeader() {
           setUser(null);
         }
       }
-    }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleLogout = () => {
