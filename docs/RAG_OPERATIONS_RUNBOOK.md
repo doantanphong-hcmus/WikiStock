@@ -74,7 +74,7 @@ AI_MODEL=claude-sonnet-4-6
 
 ## 4. Khởi động từ database sạch
 
-> Cảnh báo: lệnh `docker compose down --volumes` xóa database, Redis và model cache của project Compose hiện tại. Chỉ chạy khi chủ động muốn tạo môi trường local sạch và không cần giữ dữ liệu cũ.
+> Cảnh báo: lệnh `docker compose down --volumes` xóa database và model cache của project Compose hiện tại. Chỉ chạy khi chủ động muốn tạo môi trường local sạch và không cần giữ dữ liệu cũ.
 
 ```powershell
 docker compose down --volumes
@@ -87,7 +87,7 @@ Compose thực hiện theo thứ tự:
 1. Khởi động PostgreSQL có pgvector.
 2. Chờ healthcheck database.
 3. Chạy Prisma migration, seed dữ liệu tham chiếu và kiểm tra schema.
-4. Khởi động AI Service, Backend, Redis và Frontend.
+4. Khởi động AI Service, Backend và Frontend.
 
 Kiểm tra health:
 
