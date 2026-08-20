@@ -8,15 +8,13 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3001
-      JWT_SECRET: ${JWT_SECRET:-replace_with_at_least_32_random_characters}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to at least 32 characters}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
       DB_USER: ${DB_USER:-app_user}
       DB_PASSWORD: ${DB_PASSWORD:-app_password}
       DB_NAME: ${DB_NAME:-app_db}
       DATABASE_URL: ${DATABASE_URL:-postgresql://app_user:app_password@postgres:5432/app_db}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-60000}
       AI_DEMO_MODE: ${AI_DEMO_MODE:-false}
@@ -31,8 +29,6 @@ services:
         condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
       ai-service:
         condition: service_started
     networks:
@@ -102,8 +98,6 @@ services:
       AI_CUSTOM_HEADERS: ${AI_CUSTOM_HEADERS:-}
       AI_CONNECT_TIMEOUT_SECONDS: ${AI_CONNECT_TIMEOUT_SECONDS:-5}
       AI_READ_TIMEOUT_SECONDS: ${AI_READ_TIMEOUT_SECONDS:-45}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
     volumes:
       - "${RAG_SEED_DATA_PATH:-./docs/Seed_Daa/Báo cáo tài chính}:/data/seed_data:ro"
       - model_cache:/models
@@ -114,8 +108,6 @@ services:
         condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
     networks:
       - app_network
 
@@ -138,21 +130,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    networks:
-      - app_network
-
-  # 6. Redis
-  redis:
-    image: redis:7-alpine
-    container_name: redis_cache
-    restart: unless-stopped
-    expose:
-      - "6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     networks:
       - app_network
 
