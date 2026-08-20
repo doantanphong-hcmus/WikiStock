@@ -3,7 +3,7 @@ export const appConfig = {
     return Number(process.env.PORT ?? 3001);
   },
   get frontendUrl() {
-    return process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    return new URL(process.env.FRONTEND_URL ?? 'http://localhost:3000').origin;
   },
   get jwtSecret() {
     return process.env.JWT_SECRET;
@@ -24,6 +24,18 @@ function isUrl(value: string | undefined, protocols: string[]): boolean {
   } catch {
     return false;
   }
+}
+
+function isHttpOrigin(value: string | undefined): boolean {
+  if (!isUrl(value, ['http:', 'https:'])) return false;
+  const url = new URL(value!);
+  return (
+    !url.username &&
+    !url.password &&
+    url.pathname === '/' &&
+    !url.search &&
+    !url.hash
+  );
 }
 
 export function validateRuntimeConfig(
@@ -67,8 +79,10 @@ export function validateRuntimeConfig(
   if (!isPositiveInteger(env.AI_SERVICE_TIMEOUT_MS)) {
     errors.push('AI_SERVICE_TIMEOUT_MS phải là số nguyên dương');
   }
-  if (!isUrl(env.FRONTEND_URL?.trim(), ['http:', 'https:'])) {
-    errors.push('FRONTEND_URL phải là URL HTTP(S) hợp lệ');
+  if (!isHttpOrigin(env.FRONTEND_URL?.trim())) {
+    errors.push(
+      'FRONTEND_URL phải là HTTP(S) origin, không chứa path hoặc query',
+    );
   }
   if (!env.SEED_DATA_PATH?.trim() || env.SEED_DATA_PATH.includes('\0')) {
     errors.push('SEED_DATA_PATH không được để trống');

@@ -20,7 +20,7 @@ describe('validateRuntimeConfig', () => {
     ['JWT secret', { JWT_SECRET: 'replace_with_secret' }],
     ['AI URL', { AI_SERVICE_URL: 'not-a-url' }],
     ['AI timeout', { AI_SERVICE_TIMEOUT_MS: '0' }],
-    ['Frontend URL', { FRONTEND_URL: 'ftp://example.com' }],
+    ['Frontend URL', { FRONTEND_URL: 'https://example.com/app' }],
     ['seed path', { SEED_DATA_PATH: '' }],
   ])('từ chối cấu hình %s không hợp lệ', (_name, override) => {
     expect(() => validateRuntimeConfig({ ...validEnv, ...override })).toThrow(
