@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -10,6 +11,7 @@ import {
 import { AuthenticatedGuard } from '../auth/authenticated.guard';
 import type { AuthenticatedRequest } from '../auth/authenticated.guard';
 import { ChatService } from './chat.service';
+import { CreateMessageDto } from './dto/create-message.dto';
 
 @Controller(['v1/chat', 'chat'])
 @UseGuards(AuthenticatedGuard)
@@ -32,5 +34,18 @@ export class ChatController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.chatService.listMessages(request.user.userId, conversationId);
+  }
+
+  @Post('conversations/:conversationId/messages')
+  createUserMessage(
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() payload: CreateMessageDto,
+  ) {
+    return this.chatService.createUserMessage(
+      request.user.userId,
+      conversationId,
+      payload.content,
+    );
   }
 }

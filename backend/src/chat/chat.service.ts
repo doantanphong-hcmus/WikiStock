@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ApiResponse, Citation } from '../common/types/api.types';
 import { publicDocumentUrl } from '../common/document-url';
@@ -22,6 +26,28 @@ export interface ConversationSummary {
   startedAt: string;
   updatedAt: string;
   messageCount: number;
+}
+
+export interface MessageCompany {
+  companyId: number;
+  ticker: string;
+  companyName: string;
+}
+
+export interface CreatedUserMessage {
+  messageId: number;
+  role: 'user';
+  content: string;
+  relatedCompany: MessageCompany | null;
+  createdAt: string;
+  clarification: string | null;
+}
+
+export interface SaveAssistantMessageInput {
+  content: string;
+  relatedCompanyId?: number | null;
+  modelUsed?: string | null;
+  citationIds?: number[];
 }
 
 function conversationTitle(content: string | null): string {
@@ -97,14 +123,7 @@ export class ChatService {
   }
 
   async listMessages(userId: number, conversationId: number) {
-    const conversation = await this.prisma.aiConversation.findFirst({
-      where: { conversationId, userId },
-      select: { conversationId: true },
-    });
-    if (!conversation) {
-      throw new NotFoundException('Conversation not found');
-    }
-
+    await this.requireConversation(userId, conversationId);
     const messages = await this.prisma.aiMessage.findMany({
       where: { conversationId },
       orderBy: [{ createdAt: 'desc' }, { messageId: 'desc' }],
@@ -160,5 +179,130 @@ export class ChatService {
       })),
       error: null,
     };
+  }
+
+  async createUserMessage(
+    userId: number,
+    conversationId: number,
+    content: string,
+  ): Promise<ApiResponse<CreatedUserMessage>> {
+    await this.requireConversation(userId, conversationId);
+    const normalizedContent = content.trim();
+    if (!normalizedContent) {
+      throw new BadRequestException('Message content is required');
+    }
+
+    const relatedCompany = await this.resolveCompany(
+      userId,
+      conversationId,
+      normalizedContent,
+    );
+    const message = await this.prisma.aiMessage.create({
+      data: {
+        conversationId,
+        role: 'user',
+        content: normalizedContent,
+        relatedCompanyId: relatedCompany?.companyId,
+      },
+    });
+
+    return {
+      statusCode: 201,
+      message: 'Created user message',
+      data: {
+        messageId: message.messageId,
+        role: 'user',
+        content: message.content,
+        relatedCompany,
+        createdAt: message.createdAt.toISOString(),
+        clarification: relatedCompany
+          ? null
+          : 'Bạn muốn hỏi về doanh nghiệp nào?',
+      },
+      error: null,
+    };
+  }
+
+  // D3 chỉ gọi hàm này sau khi AI đã trả lời hoàn chỉnh.
+  async saveAssistantMessage(
+    userId: number,
+    conversationId: number,
+    input: SaveAssistantMessageInput,
+  ) {
+    await this.requireConversation(userId, conversationId);
+    const content = input.content.trim();
+    if (!content) {
+      throw new BadRequestException('Assistant message content is required');
+    }
+
+    const citationIds = [...new Set(input.citationIds ?? [])];
+    const message = await this.prisma.aiMessage.create({
+      data: {
+        conversationId,
+        role: 'assistant',
+        content,
+        relatedCompanyId: input.relatedCompanyId,
+        modelUsed: input.modelUsed,
+        citations: {
+          create: citationIds.map((citationId) => ({ citationId })),
+        },
+      },
+      select: { messageId: true, createdAt: true },
+    });
+
+    return {
+      messageId: message.messageId,
+      createdAt: message.createdAt.toISOString(),
+    };
+  }
+
+  private async requireConversation(userId: number, conversationId: number) {
+    const conversation = await this.prisma.aiConversation.findFirst({
+      where: { conversationId, userId },
+      select: { conversationId: true },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+    return conversation;
+  }
+
+  private async resolveCompany(
+    userId: number,
+    conversationId: number,
+    content: string,
+  ): Promise<MessageCompany | null> {
+    // Chỉ nhận mã độc lập có thật trong database, không suy đoán bằng AI.
+    const tokens = [
+      ...new Set(content.toUpperCase().match(/[A-Z0-9]{1,10}/g) ?? []),
+    ];
+    if (tokens.length > 0) {
+      const companies = await this.prisma.company.findMany({
+        where: { ticker: { in: tokens } },
+        select: { companyId: true, ticker: true, companyName: true },
+      });
+      const companiesByTicker = new Map(
+        companies.map((company) => [company.ticker, company]),
+      );
+      const currentCompany = tokens
+        .map((token) => companiesByTicker.get(token))
+        .find((company) => company !== undefined);
+      if (currentCompany) return currentCompany;
+    }
+
+    const previousMessage = await this.prisma.aiMessage.findFirst({
+      where: {
+        conversationId,
+        relatedCompanyId: { not: null },
+        conversation: { userId },
+      },
+      orderBy: [{ createdAt: 'desc' }, { messageId: 'desc' }],
+      select: {
+        relatedCompany: {
+          select: { companyId: true, ticker: true, companyName: true },
+        },
+      },
+    });
+    return previousMessage?.relatedCompany ?? null;
   }
 }
