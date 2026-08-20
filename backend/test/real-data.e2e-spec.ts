@@ -52,9 +52,11 @@ describeWithDatabase('Backend real-data vertical slice (e2e)', () => {
   const citationIds: number[] = [];
   const originalDatabaseUrl = process.env.DATABASE_URL;
   const originalSeedPath = process.env.SEED_DATA_PATH;
+  const originalAiDemoMode = process.env.AI_DEMO_MODE;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+    process.env.AI_DEMO_MODE = 'false';
     seedRoot = await mkdtemp(join(tmpdir(), 'wikistock-b6-e2e-'));
     outsidePdf = join(dirname(seedRoot), `${basename(seedRoot)}-outside.pdf`);
     process.env.SEED_DATA_PATH = seedRoot;
@@ -304,6 +306,8 @@ describeWithDatabase('Backend real-data vertical slice (e2e)', () => {
     else process.env.DATABASE_URL = originalDatabaseUrl;
     if (originalSeedPath === undefined) delete process.env.SEED_DATA_PATH;
     else process.env.SEED_DATA_PATH = originalSeedPath;
+    if (originalAiDemoMode === undefined) delete process.env.AI_DEMO_MODE;
+    else process.env.AI_DEMO_MODE = originalAiDemoMode;
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -442,5 +446,35 @@ describeWithDatabase('Backend real-data vertical slice (e2e)', () => {
     expect(missingFinancial.body).toMatchObject({
       error: { code: 'FINANCIALS_NOT_FOUND' },
     });
+  });
+
+  it('health kiểm tra PostgreSQL thật', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/health')
+      .expect(200);
+    expect(response.body).toMatchObject({
+      data: {
+        status: 'ready',
+        components: { process: 'available', database: 'available' },
+      },
+    });
+  });
+
+  it('AI lỗi không làm API doanh nghiệp và tài chính ngừng hoạt động', async () => {
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('AI is offline'));
+    const ai = await request(app.getHttpServer())
+      .post('/api/v1/ai/ask')
+      .send({ query: 'Doanh thu FPT thế nào?', companyCode: 'FPT' })
+      .expect(502);
+    expect(ai.body).toMatchObject({
+      error: { code: 'AI_SERVICE_UNAVAILABLE' },
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/companies/FPT/profile')
+      .expect(200);
+    await request(app.getHttpServer())
+      .get('/api/v1/companies/FPT/financials')
+      .expect(200);
   });
 });
