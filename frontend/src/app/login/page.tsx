@@ -30,7 +30,8 @@ export default function LoginPage() {
     try {
       const session = await login({ email, password });
       setAccessToken(session.accessToken);
-      router.replace("/");
+      const nextPath = new URLSearchParams(window.location.search).get("next");
+      router.replace(nextPath === "/ai" ? nextPath : "/");
     } catch (requestError) {
       setError(
         requestError instanceof ApiError && requestError.statusCode === 401

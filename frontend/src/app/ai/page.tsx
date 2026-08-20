@@ -1,397 +1,685 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import {
+  ChatStreamError,
+  createConversation,
+  listConversations,
+  listMessages,
+  streamChatMessage,
+  type ChatConversation,
+  type ChatMessage,
+} from "@/features/ai/api";
 import { getCurrentUser, type AuthUser } from "@/features/auth/api";
-import { getAccessToken } from "@/lib/api";
+import { ApiError, getAccessToken } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/env";
+import type { Citation } from "@/lib/types";
 
 const fontSans = "'Inter', 'Roboto', 'Open Sans', 'Segoe UI', sans-serif";
 const fontBody = "'Lexend', 'Poppins', sans-serif";
 
-interface Message {
+type MessageStatus = "complete" | "sending" | "streaming" | "error" | "stopped";
+
+interface UiMessage {
   id: string;
+  messageId?: number;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  createdAt: string;
+  citations: Citation[];
+  status: MessageStatus;
+  isConfident?: boolean;
+  limitations?: string;
+  errorMessage?: string;
+}
+
+interface FailedRequest {
+  content: string;
+  clientRequestId: string;
+  assistantId: string;
 }
 
 const suggestedQuestions = [
-  "Giá chứng khoán của FPT hôm nay",
-  "Tổng tài sản của VCB tại thời điểm cuối quý gần nhất là bao nhiêu?",
-  "Hãy tóm tắt các sự kiện thay đổi nhân sự cấp cao của SSI trong năm qua.",
+  "Doanh thu quý 3 của FPT là bao nhiêu?",
+  "Lợi nhuận của FPT thay đổi thế nào so với cùng kỳ?",
+  "Tóm tắt tình hình tài sản và nợ phải trả của FPT.",
 ];
 
-const recentChats = [
-  { id: "1", title: "Giá chứng khoán của FPT hôm nay" },
-  { id: "2", title: "Tổng tài sản của VCB..." },
-  { id: "3", title: "Thay đổi nhân sự SSI..." },
-];
+function toUiMessage(message: ChatMessage): UiMessage {
+  return {
+    id: `message-${message.messageId}`,
+    messageId: message.messageId,
+    role: message.role,
+    content: message.content,
+    createdAt: message.createdAt,
+    citations: message.citations,
+    status: "complete",
+  };
+}
+
+function getInitials(name?: string | null, email?: string) {
+  if (name) {
+    return name
+      .split(" ")
+      .map((part) => part.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  return email?.charAt(0).toUpperCase() || "U";
+}
+
+function citationHref(sourceUrl: string) {
+  try {
+    const url = new URL(sourceUrl, API_BASE_URL);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function streamErrorMessage(error: unknown) {
+  if (error instanceof ChatStreamError) {
+    if (error.code === "AI_SERVICE_TIMEOUT") {
+      return "AI phản hồi quá thời gian cho phép. Bạn có thể thử lại.";
+    }
+    if (error.code === "CHAT_CONNECTION_LOST") {
+      return "Kết nối bị gián đoạn trước khi câu trả lời hoàn tất.";
+    }
+    if (error.code === "AI_INVALID_EVIDENCE") {
+      return "Nguồn dữ liệu chưa vượt qua bước kiểm chứng. Câu trả lời không được hiển thị.";
+    }
+    return error.message;
+  }
+  return "Không thể kết nối tới hệ thống AI. Vui lòng thử lại.";
+}
 
 export default function AIChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(
+    null,
+  );
+  const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<(AuthUser & { plan: string }) | null>(null);
+  const [search, setSearch] = useState("");
+  const [pageError, setPageError] = useState("");
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [failedRequest, setFailedRequest] = useState<FailedRequest | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const activeRequestRef = useRef<string | null>(null);
+  const selectedConversationRef = useRef<number | null>(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+
+  const filteredConversations = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("vi");
+    return term
+      ? conversations.filter((conversation) =>
+          conversation.title.toLocaleLowerCase("vi").includes(term),
+        )
+      : conversations;
+  }, [conversations, search]);
 
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
 
-    if (getAccessToken()) {
-      void getCurrentUser()
-        .then((currentUser) => {
-          if (isMounted) setUser({ ...currentUser, plan: "Free" });
-        })
-        .catch(() => {
-          if (isMounted) setUser(null);
-        });
+    async function bootstrap() {
+      if (!getAccessToken()) {
+        router.replace("/login?next=%2Fai");
+        return;
+      }
+
+      try {
+        const [currentUser, recentConversations] = await Promise.all([
+          getCurrentUser(),
+          listConversations(),
+        ]);
+        if (cancelled) return;
+
+        setUser(currentUser);
+        setConversations(recentConversations);
+
+        const firstConversation = recentConversations[0];
+        if (firstConversation) {
+          selectedConversationRef.current = firstConversation.conversationId;
+          setActiveConversationId(firstConversation.conversationId);
+          setIsLoadingHistory(true);
+          const history = await listMessages(firstConversation.conversationId);
+          if (!cancelled) setMessages(history.map(toUiMessage));
+        }
+      } catch (error) {
+        if (!cancelled && !(error instanceof ApiError && error.statusCode === 401)) {
+          setPageError("Không thể tải lịch sử trò chuyện từ Backend.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsBootstrapping(false);
+          setIsLoadingHistory(false);
+        }
+      }
     }
 
+    void bootstrap();
     return () => {
-      isMounted = false;
+      cancelled = true;
+      abortControllerRef.current?.abort();
     };
-  }, []);
+  }, [router]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `Theo dữ liệu cập nhật mới nhất, đây là thông tin về "${userMessage.content}". [AI response will be connected to backend]`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1500);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  useEffect(() => {
+    if (shouldAutoScrollRef.current) {
+      const container = messagesRef.current;
+      container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
     }
-  };
+  }, [messages]);
 
-  const handleNewChat = () => {
+  function cancelForNavigation() {
+    activeRequestRef.current = null;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsStreaming(false);
+    setFailedRequest(null);
+  }
+
+  async function refreshConversations() {
+    try {
+      setConversations(await listConversations());
+    } catch {
+      // Tin nhắn vẫn an toàn trong Backend; lần tải trang sau sẽ đồng bộ lại danh sách.
+    }
+  }
+
+  async function openConversation(conversationId: number) {
+    if (conversationId === selectedConversationRef.current) return;
+    cancelForNavigation();
+    selectedConversationRef.current = conversationId;
+    setActiveConversationId(conversationId);
     setMessages([]);
-    setInput("");
-  };
+    setPageError("");
+    setIsLoadingHistory(true);
+    shouldAutoScrollRef.current = true;
 
-  const getInitials = (name?: string, email?: string) => {
-    if (name) {
-      return name.split(" ").map(n => n.charAt(0)).join("").toUpperCase().slice(0, 2);
+    try {
+      const history = await listMessages(conversationId);
+      if (selectedConversationRef.current === conversationId) {
+        setMessages(history.map(toUiMessage));
+      }
+    } catch {
+      if (selectedConversationRef.current === conversationId) {
+        setPageError("Không thể tải nội dung cuộc trò chuyện này.");
+      }
+    } finally {
+      if (selectedConversationRef.current === conversationId) {
+        setIsLoadingHistory(false);
+      }
     }
-    if (email) {
-      return email.charAt(0).toUpperCase();
+  }
+
+  async function handleNewChat() {
+    cancelForNavigation();
+    setPageError("");
+    setIsPreparing(true);
+
+    try {
+      const conversation = await createConversation();
+      selectedConversationRef.current = conversation.conversationId;
+      setActiveConversationId(conversation.conversationId);
+      setConversations((current) => [conversation, ...current]);
+      setMessages([]);
+      setInput("");
+    } catch {
+      setPageError("Không thể tạo cuộc trò chuyện mới.");
+    } finally {
+      setIsPreparing(false);
     }
-    return "U";
-  };
+  }
+
+  async function sendQuestion(
+    rawContent: string,
+    clientRequestId = crypto.randomUUID(),
+    retryAssistantId?: string,
+  ) {
+    const content = rawContent.trim();
+    if (!content || isPreparing || isStreaming) return;
+
+    setPageError("");
+    setIsPreparing(true);
+    let conversationId = selectedConversationRef.current;
+
+    try {
+      if (!conversationId) {
+        const conversation = await createConversation();
+        conversationId = conversation.conversationId;
+        selectedConversationRef.current = conversationId;
+        setActiveConversationId(conversationId);
+        setConversations((current) => [conversation, ...current]);
+      }
+    } catch {
+      setPageError("Không thể tạo cuộc trò chuyện để gửi câu hỏi.");
+      setIsPreparing(false);
+      return;
+    }
+
+    const userId = `user-${clientRequestId}`;
+    const assistantId = retryAssistantId ?? `assistant-${clientRequestId}`;
+    const now = new Date().toISOString();
+
+    if (retryAssistantId) {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === retryAssistantId
+            ? {
+                ...message,
+                content: "",
+                citations: [],
+                status: "sending",
+                errorMessage: undefined,
+                limitations: undefined,
+              }
+            : message,
+        ),
+      );
+    } else {
+      setMessages((current) => [
+        ...current,
+        {
+          id: userId,
+          role: "user",
+          content,
+          createdAt: now,
+          citations: [],
+          status: "complete",
+        },
+        {
+          id: assistantId,
+          role: "assistant",
+          content: "",
+          createdAt: now,
+          citations: [],
+          status: "sending",
+        },
+      ]);
+      setInput("");
+    }
+
+    setFailedRequest(null);
+    setIsPreparing(false);
+    setIsStreaming(true);
+    shouldAutoScrollRef.current = true;
+    activeRequestRef.current = clientRequestId;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const completed = await streamChatMessage(
+        conversationId,
+        content,
+        clientRequestId,
+        controller.signal,
+        {
+          onStarted(userMessageId) {
+            if (activeRequestRef.current !== clientRequestId) return;
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === userId
+                  ? { ...message, messageId: userMessageId }
+                  : message,
+              ),
+            );
+          },
+          onDelta(text) {
+            if (activeRequestRef.current !== clientRequestId) return;
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantId
+                  ? {
+                      ...message,
+                      content: message.content + text,
+                      status: "streaming",
+                    }
+                  : message,
+              ),
+            );
+          },
+        },
+      );
+
+      if (activeRequestRef.current !== clientRequestId) return;
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantId
+            ? {
+                ...message,
+                messageId: completed.assistantMessageId,
+                citations: completed.citations,
+                status: "complete",
+                isConfident: completed.isConfident,
+                limitations: completed.limitations,
+              }
+            : message,
+        ),
+      );
+    } catch (error) {
+      if (activeRequestRef.current !== clientRequestId) return;
+      const stopped = controller.signal.aborted;
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantId
+            ? {
+                ...message,
+                status: stopped ? "stopped" : "error",
+                errorMessage: stopped
+                  ? "Bạn đã dừng câu trả lời."
+                  : streamErrorMessage(error),
+              }
+            : message,
+        ),
+      );
+      setFailedRequest({ content, clientRequestId, assistantId });
+    } finally {
+      if (activeRequestRef.current === clientRequestId) {
+        activeRequestRef.current = null;
+        abortControllerRef.current = null;
+        setIsStreaming(false);
+        void refreshConversations();
+      }
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void sendQuestion(input);
+    }
+  }
+
+  const isBusy = isPreparing || isStreaming;
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ background: "#F3F3F3" }}>
-      {/* Header */}
-      <header className="w-full px-6 py-4" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
-        <div className="mx-auto flex items-center justify-between" style={{ maxWidth: 1440 }}>
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <div className="rounded-lg px-4 py-2" style={{ background: "#101828" }}>
-                <span className="text-xl font-semibold" style={{ fontFamily: fontSans, color: "#FFFFFF", letterSpacing: "0.3px" }}>
-                  WikiStock
-                </span>
-              </div>
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm" style={{ fontFamily: fontBody, color: "#6B7280" }}>
-              Nền tảng tra cứu sức khỏe doanh nghiệp niêm yết
+    <div className="flex min-h-screen flex-col bg-[#F3F3F3]">
+      <header className="w-full border-b border-gray-200 bg-white px-6 py-4">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between">
+          <Link href="/" className="rounded-lg bg-[#101828] px-4 py-2">
+            <span className="text-xl font-semibold text-white" style={{ fontFamily: fontSans }}>
+              WikiStock
             </span>
-          </div>
+          </Link>
+          <span className="hidden text-sm text-gray-500 sm:block" style={{ fontFamily: fontBody }}>
+            Nền tảng tra cứu sức khỏe doanh nghiệp niêm yết
+          </span>
         </div>
       </header>
 
-      <main className="flex flex-1">
-        {/* Sidebar - Light gray background */}
-        <aside
-          className="flex w-80 flex-col"
-          style={{ background: "#EFEFEF" }}
-        >
-          {/* Sidebar Header with Logo */}
-          <div className="border-b p-4" style={{ borderColor: "#D1D5DB" }}>
-            {/* WikiStock Logo */}
-            <div className="mb-4 flex items-center gap-2">
-              <Link href="/">
-                <div className="rounded-lg px-4 py-2" style={{ background: "#101828" }}>
-                  <span
-                    className="text-xl font-semibold"
-                    style={{ fontFamily: fontSans, color: "#FFFFFF", letterSpacing: "0.3px" }}
-                  >
-                    WikiStock
-                  </span>
-                </div>
-              </Link>
-            </div>
-
+      <main className="flex min-h-0 flex-1">
+        <aside className="hidden w-80 shrink-0 flex-col bg-[#EFEFEF] md:flex">
+          <div className="border-b border-gray-300 p-4">
             <button
-              onClick={handleNewChat}
-              className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all hover:bg-gray-200"
-              style={{ fontFamily: fontBody, color: "#1F2937", background: "#FFFFFF", border: "1px solid #D1D5DB" }}
+              type="button"
+              onClick={() => void handleNewChat()}
+              disabled={isPreparing}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-800 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ fontFamily: fontBody }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              New chat
+              <span aria-hidden="true" className="text-lg leading-none">+</span>
+              Cuộc trò chuyện mới
             </button>
           </div>
 
-          {/* User Info - Bottom section */}
-          <div className="mt-auto border-t p-4" style={{ borderColor: "#D1D5DB" }}>
-            {user ? (
-              <div className="flex items-center gap-3">
-                {/* Purple avatar */}
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
-                  style={{
-                    background: "#581C87",
-                    color: "#FFFFFF",
-                    fontFamily: fontSans,
-                  }}
-                >
-                  {getInitials(user.fullName ?? undefined, user.email)}
-                </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ fontFamily: fontBody, color: "#111827" }}>
-                    {user.fullName || user.email.split("@")[0]}
-                  </p>
-                  <span
-                    className="text-xs"
-                    style={{ fontFamily: fontBody, color: "#6B7280" }}
+          <div className="border-b border-gray-300 p-4">
+            <label className="flex items-center gap-3 rounded-full border border-gray-300 bg-white px-4 py-2.5">
+              <span aria-hidden="true" className="text-gray-500">⌕</span>
+              <span className="sr-only">Tìm cuộc trò chuyện</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm cuộc trò chuyện"
+                className="min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
+              Gần đây
+            </h2>
+            {isBootstrapping ? (
+              <p className="text-sm text-gray-500">Đang tải lịch sử...</p>
+            ) : filteredConversations.length ? (
+              <div className="space-y-1">
+                {filteredConversations.map((conversation) => (
+                  <button
+                    type="button"
+                    key={conversation.conversationId}
+                    onClick={() => void openConversation(conversation.conversationId)}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition ${
+                      activeConversationId === conversation.conversationId
+                        ? "bg-white font-medium text-gray-950"
+                        : "text-gray-700 hover:bg-gray-200"
+                    }`}
                   >
-                    {user.plan}
-                  </span>
-                </div>
+                    <span aria-hidden="true">◱</span>
+                    <span className="truncate">{conversation.title}</span>
+                  </button>
+                ))}
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
-                  style={{
-                    background: "#581C87",
-                    color: "#FFFFFF",
-                    fontFamily: fontSans,
-                  }}
-                >
-                  U
-                </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ fontFamily: fontBody, color: "#111827" }}>
-                    Guest User
-                  </p>
-                  <span className="text-xs" style={{ fontFamily: fontBody, color: "#6B7280" }}>
-                    Not signed in
-                  </span>
-                </div>
-              </div>
+              <p className="text-sm text-gray-500">
+                {search ? "Không tìm thấy cuộc trò chuyện." : "Chưa có cuộc trò chuyện nào."}
+              </p>
             )}
           </div>
 
-          {/* Search */}
-          <div className="border-b p-4" style={{ borderColor: "#D1D5DB" }}>
-            <div
-              className="flex items-center gap-3 rounded-full px-4 py-2.5"
-              style={{ background: "#FFFFFF", border: "1px solid #D1D5DB" }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search"
-                className="flex-1 bg-transparent text-sm outline-none"
-                style={{ fontFamily: fontBody, color: "#374151" }}
-              />
+          {user ? (
+            <div className="border-t border-gray-300 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-900 text-sm font-semibold text-white">
+                  {getInitials(user.fullName, user.email)}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900">
+                    {user.fullName || user.email.split("@")[0]}
+                  </p>
+                  <p className="truncate text-xs text-gray-500">{user.email}</p>
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Recent Chats */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <h3
-              className="mb-3 text-xs font-medium uppercase tracking-wide"
-              style={{ color: "#6B7280", fontFamily: fontBody }}
-            >
-              Recent
-            </h3>
-            <div className="space-y-1">
-              {recentChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all hover:bg-gray-200"
-                  style={{ fontFamily: fontBody, color: "#374151" }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="truncate">{chat.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          ) : null}
         </aside>
 
-        {/* Chat Area - Light background */}
-        <div className="flex flex-1 flex-col" style={{ background: "#F3F3F3" }}>
-          <div className="flex-1 overflow-y-auto p-6">
-            {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center">
-                <h1
-                  className="mb-8 text-center text-4xl font-medium"
-                  style={{ fontFamily: fontBody, color: "#111827" }}
-                >
-                  Let&apos;s start with today&apos;s topic!
-                </h1>
+        <section className="flex min-w-0 flex-1 flex-col bg-[#F3F3F3]">
+          <div
+            ref={messagesRef}
+            onScroll={(event) => {
+              const element = event.currentTarget;
+              shouldAutoScrollRef.current =
+                element.scrollHeight - element.scrollTop - element.clientHeight < 100;
+            }}
+            className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+          >
+            {pageError ? (
+              <div role="alert" className="mx-auto mb-4 max-w-3xl rounded-xl bg-red-50 p-4 text-sm text-red-700">
+                {pageError}
+              </div>
+            ) : null}
 
-                <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
-                  {suggestedQuestions.map((question, index) => (
+            {isBootstrapping || isLoadingHistory ? (
+              <div className="flex h-full items-center justify-center text-gray-500">
+                Đang tải lịch sử trò chuyện...
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center py-10">
+                <h1 className="mb-3 text-center text-3xl font-medium text-gray-950 sm:text-4xl" style={{ fontFamily: fontBody }}>
+                  Bạn muốn tìm hiểu doanh nghiệp nào?
+                </h1>
+                <p className="mb-8 max-w-xl text-center text-sm text-gray-500">
+                  Hỏi về báo cáo tài chính và kiểm tra nguồn dẫn chứng ngay trong câu trả lời.
+                </p>
+                <div className="grid w-full max-w-3xl gap-3 md:grid-cols-3">
+                  {suggestedQuestions.map((question) => (
                     <button
-                      key={index}
+                      type="button"
+                      key={question}
                       onClick={() => setInput(question)}
-                      className="rounded-xl p-4 text-left transition-all hover:shadow-md"
-                      style={{
-                        background: "#FFFFFF",
-                        border: "1px solid #E5E7EB",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                      }}
+                      className="rounded-xl border border-gray-200 bg-white p-4 text-left text-sm leading-relaxed text-gray-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
-                      <p className="text-sm leading-relaxed" style={{ fontFamily: fontBody, color: "#111827" }}>
-                        {question}
-                      </p>
+                      {question}
                     </button>
                   ))}
                 </div>
-
-                <div className="mt-12 flex items-center gap-4">
-                  <div
-                    className="flex h-16 w-16 items-center justify-center rounded-full"
-                    style={{ background: "#101828" }}
-                  >
-                    <span
-                      className="text-2xl font-semibold"
-                      style={{ fontFamily: fontSans, color: "#FFFFFF" }}
-                    >
-                      AI
-                    </span>
+                <div className="mt-10 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#101828] font-semibold text-white">
+                    AI
                   </div>
                   <div>
-                    <p
-                      className="text-base font-medium"
-                      style={{ color: "#111827", fontFamily: fontSans }}
-                    >
-                      WikiStock AI Assistant
-                    </p>
-                    <p className="text-sm" style={{ color: "#6B7280", fontFamily: fontBody }}>
-                      Powered by advanced RAG technology
-                    </p>
+                    <p className="text-sm font-medium text-gray-900">WikiStock AI</p>
+                    <p className="text-xs text-gray-500">Trả lời bằng dữ liệu RAG có dẫn nguồn</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="mx-auto max-w-3xl space-y-6">
+              <div className="mx-auto max-w-3xl space-y-5">
                 {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-5 py-4 ${
-                        message.role === "user" ? "rounded-br-md" : "rounded-bl-md"
+                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <article
+                      className={`max-w-[88%] rounded-2xl border border-gray-200 bg-white px-5 py-4 text-gray-900 ${
+                        message.role === "user" ? "rounded-br-md shadow-sm" : "rounded-bl-md"
                       }`}
-                      style={
-                        message.role === "user"
-                          ? {
-                              background: "#FFFFFF",
-                              color: "#111827",
-                              border: "1px solid #E5E7EB",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-                            }
-                          : {
-                              background: "#FFFFFF",
-                              color: "#111827",
-                              border: "1px solid #E5E7EB",
-                            }
-                      }
                     >
-                      <p className="text-base leading-relaxed" style={{ fontFamily: fontBody, lineHeight: 1.8 }}>
-                        {message.content}
-                      </p>
-                      {message.role === "assistant" && (
-                        <p className="mt-2 text-xs" style={{ fontFamily: fontBody, color: "#2563EB" }}>
-                          Nguồn: VietstockFinance, Nguoiquansat.vn
+                      {message.content ? (
+                        <p className="whitespace-pre-wrap break-words text-base leading-7" style={{ fontFamily: fontBody }}>
+                          {message.content}
+                          {message.status === "streaming" ? (
+                            <span className="ml-1 inline-block h-4 w-1 animate-pulse bg-gray-700" aria-label="Đang trả lời" />
+                          ) : null}
                         </p>
-                      )}
-                    </div>
+                      ) : message.role === "assistant" && message.status === "sending" ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-500" role="status">
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-gray-800" />
+                          Đang phân tích dữ liệu và kiểm tra nguồn...
+                        </div>
+                      ) : null}
+
+                      {message.errorMessage ? (
+                        <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="alert">
+                          <p>{message.errorMessage}</p>
+                          {failedRequest?.assistantId === message.id ? (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() =>
+                                void sendQuestion(
+                                  failedRequest.content,
+                                  failedRequest.clientRequestId,
+                                  failedRequest.assistantId,
+                                )
+                              }
+                              className="mt-2 font-semibold text-blue-700 hover:underline disabled:opacity-50"
+                            >
+                              Thử lại
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {message.status === "complete" && message.isConfident === false ? (
+                        <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                          {message.limitations || "Câu trả lời này chưa có đủ nguồn dữ liệu để xác nhận."}
+                        </p>
+                      ) : null}
+
+                      {message.role === "assistant" && message.citations.length ? (
+                        <div className="mt-4 border-t border-gray-100 pt-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Nguồn đã kiểm chứng</p>
+                          <ul className="space-y-2">
+                            {message.citations.map((citation) => {
+                              const href = citationHref(citation.sourceUrl);
+                              return (
+                                <li key={citation.citationId} className="text-sm">
+                                  {href ? (
+                                    <a href={href} target="_blank" rel="noreferrer" className="font-medium text-blue-700 hover:underline">
+                                      {citation.docTitle}
+                                    </a>
+                                  ) : (
+                                    <span className="font-medium text-gray-700">{citation.docTitle}</span>
+                                  )}
+                                  {citation.locationRef ? (
+                                    <span className="ml-2 text-xs text-gray-500">{citation.locationRef}</span>
+                                  ) : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ) : null}
+
+                      <time className="mt-2 block text-right text-[11px] text-gray-400" dateTime={message.createdAt}>
+                        {new Date(message.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                      </time>
+                    </article>
                   </div>
                 ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div
-                      className="flex items-center gap-2 rounded-2xl rounded-bl-md px-5 py-4"
-                      style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}
-                    >
-                      <div className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#101828" }} />
-                      <div className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#101828", animationDelay: "0.2s" }} />
-                      <div className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#101828", animationDelay: "0.4s" }} />
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* Input Area - Pill shaped */}
-          <div className="border-t p-4" style={{ borderColor: "#E5E7EB", background: "#F3F3F3" }}>
-            <div
-              className="mx-auto flex max-w-4xl items-center gap-4 rounded-full px-6 py-4"
-              style={{ background: "#FFFFFF", border: "1px solid #D1D5DB" }}
-            >
-              <input
-                type="text"
+          <div className="border-t border-gray-200 bg-[#F3F3F3] p-3 sm:p-4">
+            <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-3xl border border-gray-300 bg-white px-5 py-3">
+              <label htmlFor="chat-input" className="sr-only">Nhập câu hỏi</label>
+              <textarea
+                id="chat-input"
+                rows={1}
+                maxLength={4000}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Search for...."
-                className="flex-1 bg-transparent text-base outline-none"
-                style={{ fontFamily: fontBody, color: "#374151" }}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isBootstrapping || isLoadingHistory}
+                placeholder="Hỏi WikiStock về một doanh nghiệp..."
+                className="max-h-36 min-h-7 flex-1 resize-none bg-transparent py-1 text-base text-gray-800 outline-none disabled:cursor-not-allowed"
               />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className="flex items-center justify-center rounded-full p-3 transition-all disabled:opacity-50"
-                style={{ background: "#101828" }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </button>
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={() => abortControllerRef.current?.abort()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700"
+                  aria-label="Dừng câu trả lời"
+                  title="Dừng câu trả lời"
+                >
+                  <span className="h-3 w-3 rounded-sm bg-white" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void sendQuestion(input)}
+                  disabled={!input.trim() || isBusy || isBootstrapping || isLoadingHistory}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#101828] text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Gửi câu hỏi"
+                  title="Gửi câu hỏi"
+                >
+                  <span aria-hidden="true">↑</span>
+                </button>
+              )}
             </div>
-            <p className="mt-3 text-center text-xs" style={{ color: "#9CA3AF", fontFamily: fontBody }}>
-              AI can make mistakes. Consider checking important information.
+            <p className="mt-2 text-center text-xs text-gray-500">
+              Enter để gửi · Shift + Enter để xuống dòng · Luôn kiểm tra nguồn trước quyết định tài chính
             </p>
           </div>
-        </div>
+        </section>
       </main>
     </div>
   );
