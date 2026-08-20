@@ -102,12 +102,12 @@ Ba câu live phải cùng đạt. HTTP `401` nghĩa là gateway không chấp nh
 | Hành trình Backend + PostgreSQL | Đạt | Test D5 chạy với PostgreSQL test thật |
 | Giữ ngữ cảnh FPT | Đạt | Câu hỏi tiếp theo vẫn gửi `companyCode=FPT` |
 | Lưu lịch sử và cách ly người dùng | Đạt | Đăng nhập lại thấy lịch sử; người dùng khác bị chặn |
-| Provider AI thật | Chưa đạt | Gateway trả HTTP `401` cho cả ba câu smoke test |
+| Provider AI thật | Đạt | Ba câu grounded và ba kiểm tra streaming live đều đạt với `x-api-key`; chữ đầu xuất hiện sau khoảng 2,3 giây trong lần đo này |
 | Ingest PDF local | Chưa xác nhận lại | Lần nạp model BGE-M3 trên máy này treo; cần xử lý cache/model trước khi demo |
 | Kiểm tra thẩm mỹ trực tiếp | Chưa xác nhận | Công cụ Browser của phiên làm việc lỗi cấu hình trusted path; cần QA mở giao diện PC kiểm tra thủ công |
 | Happy path lặp ba lần | Chưa thực hiện | Chỉ chạy sau khi provider và dữ liệu RAG đã sẵn sàng |
 
-Kết luận hiện tại: phần code và hợp đồng D5 đã có kiểm thử tự động, nhưng chưa đủ điều kiện bàn giao khách hàng cho luồng AI thật cho tới khi provider hết `401`, dữ liệu RAG local được nạp thành công và hành trình thủ công chạy xanh ba lần.
+Kết luận hiện tại: phần code, hợp đồng D5 và kết nối provider thật đã vượt qua kiểm thử tự động. Chưa bàn giao khách hàng cho tới khi dữ liệu RAG local được nạp thành công, giao diện được kiểm tra trực tiếp và hành trình thủ công chạy xanh ba lần.
 
 ## 6. Kiểm tra an toàn trước khi commit
 
