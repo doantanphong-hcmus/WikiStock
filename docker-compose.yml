@@ -97,6 +97,7 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-demo}
       AI_API_BASE_URL: ${AI_API_BASE_URL:-https://claude.zunef.com/v1/ai}
       AI_API_KEY: ${AI_API_KEY:-}
+      AI_AUTH_SCHEME: ${AI_AUTH_SCHEME:-bearer}
       AI_MODEL: ${AI_MODEL:-claude-sonnet-4-6}
       AI_CUSTOM_HEADERS: ${AI_CUSTOM_HEADERS:-}
       AI_CONNECT_TIMEOUT_SECONDS: ${AI_CONNECT_TIMEOUT_SECONDS:-5}
