@@ -242,7 +242,7 @@ export default function AIChatPage() {
     if (!isStreaming) return;
     const timer = window.setInterval(() => {
       setAnalysisStepIndex((current) => (current + 1) % analysisSteps.length);
-    }, 1400);
+    }, 2800);
     return () => window.clearInterval(timer);
   }, [isStreaming]);
 

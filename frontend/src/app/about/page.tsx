@@ -153,6 +153,7 @@ export default function AboutPage() {
                           width={96}
                           height={96}
                           className="h-full w-full object-cover"
+                          sizes="96px"
                         />
                       ) : (
                         <span

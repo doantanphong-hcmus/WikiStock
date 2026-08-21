@@ -33,7 +33,7 @@ export function CompanyLogo({
           src={logoSrc}
           alt={`Logo chính thức của ${companyName}`}
           fill
-          sizes="80px"
+          sizes="(max-width: 640px) 64px, 80px"
           className="object-contain p-1.5"
         />
       ) : (

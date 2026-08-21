@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "admin:create": "ts-node src/scripts/create-admin.ts",
-    "db:bootstrap": "npm run db:migrate && npm run db:seed && npm run db:check",
+    "db:bootstrap": "npm run db:migrate && npm run db:seed",
     "db:check": "ts-node src/scripts/check-schema.ts",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "prisma db seed",

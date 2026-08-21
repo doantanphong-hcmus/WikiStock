@@ -5,6 +5,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "WikiStock",
   description: "Company intelligence skeleton for Vietnamese equities",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

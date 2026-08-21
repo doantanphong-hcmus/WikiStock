@@ -1,19 +1,11 @@
 import Link from "next/link";
 
-const footerLinks = [
-  { href: "/", label: "Trang chủ" },
-  { href: "/about", label: "Giới thiệu" },
-  { href: "/pricing", label: "Bảng giá" },
-  { href: "/ai", label: "Chat với AI" },
-  { href: "/search", label: "Tìm kiếm" },
-];
-
 const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
 const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
 
 const socialIcons = [
   {
-    href: "https://github.com/congahoccode",
+    href: "https://github.com/doantanphong-hcmus/WikiStock/tree/main",
     label: "GitHub",
     svg: (
       <svg viewBox="0 0 24 24" fill="currentColor">
@@ -22,7 +14,7 @@ const socialIcons = [
     ),
   },
   {
-    href: "https://www.facebook.com/viet.thang.31508076",
+    href: "https://github.com/doantanphong-hcmus/WikiStock/tree/main",
     label: "LinkedIn",
     svg: (
       <svg viewBox="0 0 24 24" fill="currentColor">
@@ -54,19 +46,6 @@ export function AppFooter() {
             </div>
           </div>
 
-          <nav className="flex items-center gap-8">
-            {footerLinks.map((link) => (
-              <Link
-                key={link.href + link.label}
-                href={link.href}
-                className="text-sm font-normal transition-colors hover:text-cyan-400"
-                style={{ fontFamily: fontBody, color: "#94A3B8" }}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
           <div className="flex items-center gap-4">
             {socialIcons.map((social) => (
               <a
@@ -88,7 +67,7 @@ export function AppFooter() {
 
         <div className="text-center">
           <p className="text-sm" style={{ fontFamily: fontBody, color: "#64748B" }}>
-            © 2026 WikiStock | Ân oán gian hồ nuôi tao lớn, HCMUS dạy tao khôn.
+            © 2026 WikiStock | ULESER Team From VNU-HCM University of Science & VNU-HCM University of Economy and Law.
           </p>
         </div>
       </div>

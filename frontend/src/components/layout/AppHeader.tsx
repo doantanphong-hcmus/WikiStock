@@ -119,7 +119,7 @@ export function AppHeader() {
                 color: "#94A3B8",
                 marginLeft: 16,
                 fontWeight: 400,
-                fontSize: "114%",
+                fontSize: "104%",
               }}
             >
               Nền tảng tra cứu sức khỏe doanh nghiệp niêm yết
@@ -135,7 +135,7 @@ export function AppHeader() {
                 style={{
                   fontFamily: fontBody,
                   color: "#CBD5E1",
-                  fontSize: "114%",
+                  fontSize: "104%",
                 }}
               >
                 {link.label}

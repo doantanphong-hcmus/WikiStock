@@ -1,6 +1,11 @@
-import { PrismaService } from '../src/database/prisma.service';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
+import pg from 'pg';
 
-const prisma = new PrismaService();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool as any);
+const prisma = new PrismaClient({ adapter });
 
 const metrics = [
   ['TOTAL_ASSETS', 'Tổng tài sản', 'VND', 'balance_sheet'],
@@ -151,4 +156,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

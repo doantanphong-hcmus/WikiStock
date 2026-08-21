@@ -6,6 +6,9 @@ import { AppFooter } from "@/components/layout/AppFooter";
 const fontSans = "'Roboto', 'Open Sans', 'Noto Sans', 'Segoe UI', sans-serif";
 const fontBody = "'Poppins', 'Open Sans', 'Roboto', 'Segoe UI', sans-serif";
 
+// Low-quality placeholder for hero image blur effect
+const heroPlaceholder = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k=";
+
 export default function HomePage() {
   return (
     <div
@@ -30,6 +33,9 @@ export default function HomePage() {
             fill
             className="object-cover"
             priority
+            placeholder="blur"
+            blurDataURL={heroPlaceholder}
+            sizes="55vw"
           />
         </div>
 
@@ -96,6 +102,7 @@ export default function HomePage() {
                 height={65}
                 className="relative"
                 style={{ top: 17, left: 17 }}
+                sizes="100px"
               />
             </div>
 
@@ -114,6 +121,7 @@ export default function HomePage() {
                   alt="Filter"
                   width={24}
                   height={24}
+                  sizes="24px"
                 />
               </button>
               <input
@@ -139,6 +147,7 @@ export default function HomePage() {
                   alt="Search"
                   width={24}
                   height={24}
+                  sizes="24px"
                 />
               </button>
             </form>
@@ -174,6 +183,7 @@ export default function HomePage() {
                 width={180}
                 height={180}
                 className="max-h-[120px] w-auto object-contain"
+                sizes="(max-width: 768px) 50vw, 180px"
               />
             </div>
             <div className="flex items-center justify-center">
@@ -183,6 +193,7 @@ export default function HomePage() {
                 width={180}
                 height={180}
                 className="max-h-[120px] w-auto object-contain"
+                sizes="(max-width: 768px) 50vw, 180px"
               />
             </div>
             <div className="flex items-center justify-center">
@@ -192,6 +203,7 @@ export default function HomePage() {
                 width={320}
                 height={120}
                 className="max-h-[120px] w-auto object-contain"
+                sizes="(max-width: 768px) 100vw, 320px"
               />
             </div>
             <div className="flex items-center justify-center">
@@ -201,6 +213,7 @@ export default function HomePage() {
                 width={180}
                 height={180}
                 className="max-h-[120px] w-auto object-contain"
+                sizes="(max-width: 768px) 50vw, 180px"
               />
             </div>
           </div>
@@ -228,10 +241,11 @@ export default function HomePage() {
               }}
             >
               <Image
-                src="\images\landing\chatbot.svg"
+                src="/images/landing/chatbot.svg"
                 alt="Chat"
                 width={24}
                 height={24}
+                sizes="24px"
               />
             </div>
             <h3
@@ -267,6 +281,7 @@ export default function HomePage() {
                 alt="Companies"
                 width={24}
                 height={24}
+                sizes="24px"
               />
             </div>
             <h3
@@ -302,6 +317,7 @@ export default function HomePage() {
                 alt="Market"
                 width={24}
                 height={24}
+                sizes="24px"
               />
             </div>
             <h3

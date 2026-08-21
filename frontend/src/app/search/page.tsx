@@ -45,6 +45,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8">
+      <div className="flex items-center gap-3">
+        <Link
+          href="/"
+          className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-950"
+        >
+          <span aria-hidden="true">←</span>
+          Quay về trang chủ
+        </Link>
+      </div>
+
       <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
         <h1 className="text-3xl font-semibold tracking-normal text-zinc-950">
           Tra cứu doanh nghiệp
