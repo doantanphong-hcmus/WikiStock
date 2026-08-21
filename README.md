@@ -253,8 +253,6 @@ Backend là điểm kiểm soát quyền truy cập và hợp đồng API. AI Se
 
 ```bash
 git clone https://github.com/doantanphong-hcmus/WikiStock.git
-cd WikiStock
-git switch develop
 ```
 
 ### 2. Tạo file cấu hình
