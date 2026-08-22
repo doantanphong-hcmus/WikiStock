@@ -53,7 +53,7 @@
   </tr>
 </table>
 
-Nhóm trân trọng cảm ơn **giảng viên hướng dẫn, ThS. Nguyễn Hữu Toàn — giảng viên Khoa Toán, Trường Đại học Khoa học Tự nhiên, ĐHQG-TP.HCM** đã đồng hành bằng những phản biện về dữ liệu, tài chính, tính khả thi và trách nhiệm khi đưa AI vào một sản phẩm hỗ trợ tra cứu doanh nghiệp.
+Nhóm trân trọng cảm ơn **giảng viên hướng dẫn, ThS. Nguyễn Hữu Toàn - giảng viên Khoa Toán, Trường Đại học Khoa học Tự nhiên, ĐHQG-TP.HCM** đã đồng hành bằng những phản biện về dữ liệu, tài chính, tính khả thi và trách nhiệm khi đưa AI vào một sản phẩm hỗ trợ tra cứu doanh nghiệp.
 
 WikiStock được hình thành trong môi trường học tập và đổi mới sáng tạo của **Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM** và **Trường Đại học Kinh tế - Luật, ĐHQG-HCM**. Nhóm cũng cảm ơn **Ban Tổ chức ATTACKER 2026** đã tạo cơ hội để dự án được đánh giá như một sản phẩm thực tế thay vì chỉ dừng ở phạm vi bài tập.
 
@@ -81,7 +81,7 @@ Nếu dữ liệu không đủ, hệ thống phải nói rõ giới hạn thay v
 
 ## Luồng hoạt động
 
-![WikiStock — Hành trình tra cứu của người dùng](./assets/diagrams/wikistock-user-journey.png)
+![WikiStock - Hành trình tra cứu của người dùng](./assets/diagrams/wikistock-user-journey.png)
 
 <sub>Các nhãn hiệu VNStock, VnExpress, Thanh Niên, Tuổi Trẻ, CafeBiz, VnEconomy, PostgreSQL và Claude được sử dụng để nhận diện những nguồn hoặc công nghệ được tích hợp trong WikiStock. Quyền đối với các nhãn hiệu thuộc về chủ sở hữu tương ứng; việc xuất hiện trong sơ đồ không hàm ý tài trợ, hợp tác hay chứng thực.</sub>
 
@@ -291,7 +291,7 @@ Nếu chạy bằng Docker, các Dockerfile tự đọc bốn file này trong l�
 
 Nếu chạy native, sử dụng đúng khối lệnh tại mục [Chạy native trên Windows](#chạy-native-trên-windows). Khối đó tạo một `venv` dùng chung và cài toàn bộ dependency Python lẫn Node trong một lượt.
 
-### Bước 1 — Clone nhánh `main`
+### Bước 1 - Clone nhánh `main`
 
 ```bash
 git clone https://github.com/doantanphong-hcmus/WikiStock.git
@@ -308,7 +308,7 @@ git branch --show-current
 
 Kết quả mong đợi là `main`.
 
-### Bước 2 — Tạo `.env` và secret local
+### Bước 2 - Tạo `.env` và secret local
 
 PowerShell:
 
@@ -333,7 +333,7 @@ Mở `.env`, thay giá trị của `JWT_SECRET` bằng chuỗi vừa tạo. File
 
 Với lần mở ứng dụng đầu tiên, chưa cần thay các biến khác. Cấu hình mặc định dùng database trong Docker và không gọi nhà cung cấp AI bên ngoài.
 
-### Bước 3 — Khởi động hạ tầng
+### Bước 3 - Khởi động hạ tầng
 
 ```bash
 docker compose config --quiet
@@ -350,7 +350,7 @@ Lần đầu có thể lâu hơn vì Docker phải build image và tải depende
 
 Container `db-migrate` có trạng thái `Exited (0)` là **bình thường**: đây là tác vụ chạy một lần rồi kết thúc. Các container `postgres`, `ai-service`, `backend` và `frontend` mới là các dịch vụ cần tiếp tục chạy.
 
-### Bước 4 — Xác nhận hệ thống đã sẵn sàng
+### Bước 4 - Xác nhận hệ thống đã sẵn sàng
 
 | Thành phần | Địa chỉ trên máy đang chạy Docker | Kết quả mong đợi |
 | --- | --- | --- |
@@ -380,7 +380,7 @@ Nếu health check lỗi, xem log trước khi chạy lại nhiều lần:
 docker compose logs --tail 100 db-migrate postgres ai-service backend frontend
 ```
 
-### Bước 5 — Hiểu dữ liệu có sẵn sau lần chạy đầu
+### Bước 5 - Hiểu dữ liệu có sẵn sau lần chạy đầu
 
 Migration và seed tạo schema, vai trò người dùng, các danh mục tài chính, nguồn dữ liệu và bốn doanh nghiệp mẫu `FPT`, `GAS`, `HPG`, `HSG`. Nó **không tự gọi VNStock, không tải RSS và không tự OCR/lập chỉ mục báo cáo**.
 
@@ -415,14 +415,14 @@ docker compose run --rm ai-service python -m app.ingestion scan
 
 Với bộ dữ liệu chuẩn, dry-run phải tìm thấy `12` tài liệu, `12` tài liệu sẵn sàng và `0` lỗi. Lệnh ingest tạo embedding local nên không tiêu thụ API credit, nhưng lần đầu có thể mất thời gian tải BGE-M3. Quy trình nghiệm thu đầy đủ nằm trong [RAG Operations Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/RAG_OPERATIONS_RUNBOOK.md).
 
-### Bước 6 — Mở ứng dụng như người dùng mới
+### Bước 6 - Mở ứng dụng như người dùng mới
 
 1. Mở `http://localhost:3000/signup` để tạo tài khoản.
 2. Đăng nhập tại `http://localhost:3000/login`.
 3. Tra cứu `FPT`, `GAS`, `HPG` hoặc `HSG`.
 4. Chỉ kiểm thử chatbot có trích dẫn sau khi PDF đã được ingest và AI thật đã được cấu hình.
 
-### Bước 7 — Dừng hoặc làm sạch môi trường
+### Bước 7 - Dừng hoặc làm sạch môi trường
 
 Giữ database và model cache cho lần chạy sau:
 
@@ -642,21 +642,21 @@ Lệnh này chạy migration, seed danh mục ban đầu và kiểm tra schema. 
 
 ### 5. Mở bốn terminal để chạy hệ thống
 
-Terminal 1 — AI Service:
+Terminal 1 - AI Service:
 
 ```powershell
 cd ai-service
 ..\.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-Terminal 2 — Backend:
+Terminal 2 - Backend:
 
 ```powershell
 cd backend
 npm run start:dev
 ```
 
-Terminal 3 — Frontend:
+Terminal 3 - Frontend:
 
 ```powershell
 cd frontend
