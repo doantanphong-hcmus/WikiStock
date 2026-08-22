@@ -21,6 +21,10 @@
   <img src="https://img.shields.io/badge/pgvector-vector%20search-7C3AED?style=for-the-badge&logo=postgresql&logoColor=white" alt="pgvector" />
 </p>
 
+<p align="center">
+  <sub>ATTACKER 2026 · WikiStock hiện được phát triển và tích hợp trên nhánh <a href="https://github.com/doantanphong-hcmus/WikiStock/tree/develop"><code>develop</code></a>.</sub>
+</p>
+
 ## Lời cảm ơn
 
 <table align="center">
@@ -241,101 +245,304 @@ Backend là điểm kiểm soát quyền truy cập và hợp đồng API. AI Se
 
 > Nhánh `main` hiện đóng vai trò trang giới thiệu. Bản tích hợp end-to-end mới nhất nằm ở `develop` cho đến khi nhóm tạo bản phát hành ổn định.
 
-## Khởi chạy bằng Docker Compose
+## Bắt đầu từ một bản clone sạch
 
-### Yêu cầu
+WikiStock không phải một ứng dụng chỉ cần mở Frontend là có sẵn toàn bộ dữ liệu. Một lần dựng đầy đủ gồm ba mốc độc lập:
 
-- Docker Engine và Docker Compose.
-- Tối thiểu 8 GB RAM; lần chạy đầu có thể cần thêm thời gian để tải embedding model.
-- AI API key nếu muốn kiểm thử provider thật. Không cần key nếu chỉ chạy chế độ `demo`.
+| Mốc | Khi nào được xem là đạt? | Nếu chưa đạt thì người dùng thấy gì? |
+| --- | --- | --- |
+| **1. Hạ tầng sẵn sàng** | PostgreSQL, AI Service, Backend và Frontend đều chạy; migration hoàn tất | Website không mở được hoặc API báo lỗi |
+| **2. Dữ liệu nghiệp vụ sẵn sàng** | Crawler đã nạp hồ sơ, tài chính và tin tức | Website mở được nhưng một số trang doanh nghiệp còn ít hoặc chưa có dữ liệu |
+| **3. RAG và AI thật sẵn sàng** | PDF đã qua OCR, được lập chỉ mục và gateway AI có key hợp lệ | Tra cứu doanh nghiệp vẫn dùng được, nhưng chatbot không thể trả lời có nguồn từ báo cáo |
 
-### 1. Clone repository và chuyển sang nhánh tích hợp
+Docker Compose là đường chạy được khuyến nghị vì nó dựng sẵn PostgreSQL có `pgvector`, chạy migration và nối đúng các dịch vụ. Python trên máy host chỉ cần thiết khi muốn chạy crawler hoặc tiền xử lý OCR.
+
+### Điều kiện tối thiểu
+
+| Công cụ | Dùng để làm gì? | Bắt buộc khi nào? |
+| --- | --- | --- |
+| Git | Tải mã nguồn và chuyển nhánh | Luôn cần |
+| Docker Engine và Docker Compose V2 | Chạy toàn bộ hệ thống | Cần cho cách chạy khuyến nghị |
+| Khoảng 8 GB RAM trống | Chạy các container và embedding model BGE-M3 | Cần nếu nạp dữ liệu RAG |
+| Python 3.12 x64 | Chạy crawler và OCR trên máy host | Chỉ cần khi nạp/cập nhật dữ liệu |
+| Client API key | Gọi mô hình AI thật | Chỉ cần khi kiểm thử chatbot online |
+
+Kiểm tra nhanh:
+
+```bash
+git --version
+docker --version
+docker compose version
+```
+
+### Bước 1 — Clone đúng nhánh có ứng dụng
 
 ```bash
 git clone https://github.com/doantanphong-hcmus/WikiStock.git
+cd WikiStock
+git switch develop
 ```
 
-### 2. Tạo file cấu hình
-
-Trên macOS hoặc Linux:
+Hiện tại `develop` là nhánh tích hợp chứa mã nguồn có thể chạy của Frontend, Backend, AI Service và crawler. Nếu chỉ clone rồi đứng ở `main`, nội dung nhìn thấy có thể chưa phản ánh bản phát triển mới nhất. Có thể kiểm tra lại bằng:
 
 ```bash
-cp .env.example .env
+git branch --show-current
 ```
 
-Trên PowerShell:
+Kết quả mong đợi là `develop`.
+
+### Bước 2 — Tạo `.env` và secret local
+
+PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$jwtSecret = [BitConverter]::ToString($bytes).Replace('-', '').ToLowerInvariant()
+$rng.Dispose()
+$jwtSecret
 ```
 
-Mở `.env` và thay `JWT_SECRET` bằng chuỗi ngẫu nhiên dài ít nhất 32 ký tự. Không commit `.env`, API key hoặc token vào Git.
-
-Chế độ mặc định không gọi provider AI:
-
-```dotenv
-AI_PROVIDER=demo
-```
-
-Để kiểm thử AI thật, đặt provider, base URL, model, cơ chế xác thực và key theo nhà cung cấp của bạn:
-
-```dotenv
-AI_PROVIDER=gateway
-AI_API_BASE_URL=
-AI_API_KEY=
-AI_AUTH_SCHEME=bearer
-AI_MODEL=
-```
-
-### 3. Khởi động hệ thống
+macOS hoặc Linux:
 
 ```bash
+cp .env.example .env
+openssl rand -hex 32
+```
+
+Mở `.env`, thay giá trị của `JWT_SECRET` bằng chuỗi vừa tạo. File `.env` là cấu hình riêng của máy đang chạy và có thể chứa API key; **không commit, chụp màn hình hoặc gửi file này lên issue/PR**.
+
+Với lần mở ứng dụng đầu tiên, chưa cần thay các biến khác. Cấu hình mặc định dùng database trong Docker và không gọi nhà cung cấp AI bên ngoài.
+
+### Bước 3 — Khởi động hạ tầng
+
+```bash
+docker compose config --quiet
 docker compose up -d --build
 docker compose ps --all
 ```
 
-Compose chờ PostgreSQL sẵn sàng, chạy migration, seed lookup, kiểm tra pgvector rồi mới khởi động các dịch vụ phụ thuộc.
+Lần đầu có thể lâu hơn vì Docker phải build image và tải dependency. Compose sẽ thực hiện lần lượt:
 
-### 4. Mở ứng dụng và kiểm tra trạng thái
+1. Khởi động PostgreSQL có `pgvector`.
+2. Chờ database sẵn sàng.
+3. Chạy Prisma migration, seed dữ liệu nền và kiểm tra schema.
+4. Khởi động AI Service, Backend và Frontend.
 
-| Thành phần | Địa chỉ từ máy host |
-| --- | --- |
-| WikiStock Frontend | `http://localhost:3000` |
-| Backend API | `http://localhost:3001/api/v1` |
-| Backend health check | `http://localhost:3001/api/health` |
-| AI Service | Chỉ mở trong mạng Compose tại `http://ai-service:8000` |
-| PostgreSQL | Chỉ mở trong mạng Compose tại `postgres:5432` |
+Container `db-migrate` có trạng thái `Exited (0)` là **bình thường**: đây là tác vụ chạy một lần rồi kết thúc. Các container `postgres`, `ai-service`, `backend` và `frontend` mới là các dịch vụ cần tiếp tục chạy.
+
+### Bước 4 — Xác nhận hệ thống đã sẵn sàng
+
+| Thành phần | Địa chỉ trên máy đang chạy Docker | Kết quả mong đợi |
+| --- | --- | --- |
+| WikiStock | `http://localhost:3000` | Mở được giao diện |
+| Backend health | `http://localhost:3001/api/health` | Trạng thái `ready`, database khả dụng |
+| Backend API | `http://localhost:3001/api/v1` | API gốc của ứng dụng |
+| AI Service health | `http://localhost:8000/health` | Service phản hồi bình thường |
+| PostgreSQL | `localhost:5432` | Dành cho crawler và công cụ quản trị local |
+
+PowerShell:
+
+```powershell
+Invoke-RestMethod http://localhost:3001/api/health
+Invoke-RestMethod http://localhost:8000/health
+```
+
+macOS hoặc Linux:
 
 ```bash
 curl http://localhost:3001/api/health
+curl http://localhost:8000/health
 ```
 
-### 5. Nạp dữ liệu RAG
+Nếu health check lỗi, xem log trước khi chạy lại nhiều lần:
 
-Đặt các PDF được phép sử dụng tại đường dẫn cấu hình bởi `RAG_SEED_DATA_PATH`, sau đó làm theo [RAG Operations Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/RAG_OPERATIONS_RUNBOOK.md). Repository có bộ báo cáo mẫu cho FPT, GAS, HPG và HSG để kiểm tra luồng ingestion và citation.
+```bash
+docker compose logs --tail 100 db-migrate postgres ai-service backend frontend
+```
 
-### 6. Dừng hệ thống
+### Bước 5 — Hiểu dữ liệu có sẵn sau lần chạy đầu
+
+Migration và seed tạo schema, vai trò người dùng, các danh mục tài chính, nguồn dữ liệu và bốn doanh nghiệp mẫu `FPT`, `GAS`, `HPG`, `HSG`. Nó **không tự gọi VNStock, không tải RSS và không tự OCR/lập chỉ mục báo cáo**.
+
+Vì vậy, một database sạch có thể hiển thị tên doanh nghiệp nhưng chưa có đủ chỉ số tài chính, tin tức hoặc nguồn cho chatbot. Đây là trạng thái chưa nạp dữ liệu, không phải lỗi giao diện.
+
+#### Nạp hồ sơ, tài chính và tin tức
+
+Crawler chạy trên máy host và kết nối PostgreSQL qua `localhost:5432`:
+
+```powershell
+Copy-Item crawler\.env.example crawler\.env
+cd crawler
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe check_requirements.py
+.\.venv\Scripts\python.exe main.py --ticker FPT
+cd ..
+```
+
+Nên nghiệm thu một doanh nghiệp trước. Khi FPT chạy đúng, dùng `main.py` không có `--ticker` để chạy danh sách demo. Crawler phụ thuộc dịch vụ bên ngoài nên một nguồn tạm lỗi không đồng nghĩa Backend hoặc database bị lỗi. Xem thêm [hướng dẫn crawler](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/crawler/README.md).
+
+#### Chuẩn bị và nạp báo cáo cho RAG
+
+Repository lưu 12 PDF nguồn của FPT, GAS, HPG và HSG trong `docs/Seed_Daa`. Đầu ra OCR tại `runtime/ocr/output` là dữ liệu sinh ra trên máy chạy và không được Git lưu lại. Vì vậy, người clone mới cần tạo output OCR trước khi ingest đầy đủ.
+
+Sau khi hoàn thành bước OCR theo [OCR Preprocessing](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/OCR_PREPROCESSING.md), kiểm tra và nạp PDF:
+
+```bash
+docker compose run --rm ai-service python -m app.ingestion scan --dry-run
+docker compose run --rm ai-service python -m app.ingestion scan
+```
+
+Với bộ dữ liệu chuẩn, dry-run phải tìm thấy `12` tài liệu, `12` tài liệu sẵn sàng và `0` lỗi. Lệnh ingest tạo embedding local nên không tiêu thụ API credit, nhưng lần đầu có thể mất thời gian tải BGE-M3. Quy trình nghiệm thu đầy đủ nằm trong [RAG Operations Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/RAG_OPERATIONS_RUNBOOK.md).
+
+### Bước 6 — Mở ứng dụng như người dùng mới
+
+1. Mở `http://localhost:3000/signup` để tạo tài khoản.
+2. Đăng nhập tại `http://localhost:3000/login`.
+3. Tra cứu `FPT`, `GAS`, `HPG` hoặc `HSG`.
+4. Chỉ kiểm thử chatbot có trích dẫn sau khi PDF đã được ingest và AI thật đã được cấu hình.
+
+### Bước 7 — Dừng hoặc làm sạch môi trường
+
+Giữ database và model cache cho lần chạy sau:
 
 ```bash
 docker compose down
 ```
 
-Không thêm `-v` nếu muốn giữ dữ liệu PostgreSQL và model cache.
+`docker compose down --volumes` xóa database và model cache của project local. Chỉ dùng khi chủ động muốn dựng lại từ đầu và chắc chắn không cần dữ liệu hiện có.
+
+## Cấu hình biến môi trường
+
+File `.env.example` ở thư mục gốc là mẫu dành cho Docker Compose. Khi chạy từng thành phần native, sao chép thêm file `.env.example` nằm trong `backend/`, `ai-service/`, `frontend/` hoặc `crawler/` thành `.env` của chính thành phần đó.
+
+### Ứng dụng và kết nối nội bộ
+
+| Biến | Ý nghĩa | Khi nào cần đổi? |
+| --- | --- | --- |
+| `JWT_SECRET` | Khóa ký access token đăng nhập | **Luôn phải thay** bằng chuỗi bí mật tối thiểu 32 ký tự |
+| `FRONTEND_URL` | Origin được Backend cho phép gọi API | Giữ `http://localhost:3000` khi chạy local; đổi theo domain khi deploy |
+| `AI_SERVICE_URL` | Địa chỉ Backend dùng để gọi AI Service | Trong Compose giữ `http://ai-service:8000`; chạy native dùng `http://localhost:8000` |
+| `AI_SERVICE_TIMEOUT_MS` | Thời gian Backend chờ AI Service trước khi báo timeout | Chỉ tăng khi provider hoặc máy local phản hồi chậm |
+| `AI_DEMO_MODE` | Cho phép Backend dùng câu trả lời giả khi AI Service lỗi | Giữ `false` khi nghiệm thu để không che lỗi bằng dữ liệu demo |
+
+### PostgreSQL
+
+| Biến | Ý nghĩa | Giá trị local mặc định |
+| --- | --- | --- |
+| `DB_HOST` | Tên máy chạy PostgreSQL trong mạng Compose | `postgres` |
+| `DB_PORT` | Cổng PostgreSQL bên trong Compose | `5432` |
+| `DB_USER` | Tài khoản ứng dụng | `app_user` |
+| `DB_PASSWORD` | Mật khẩu database local | `app_password`; phải thay và quản lý bằng secret khi deploy |
+| `DB_NAME` | Tên database | `app_db` |
+| `DATABASE_URL` | Chuỗi kết nối đầy đủ mà Backend và AI Service sử dụng | Trong Compose dùng hostname `postgres`; từ máy host dùng `localhost` |
+
+Không đổi riêng `DB_PASSWORD` mà quên cập nhật `DATABASE_URL`, vì ứng dụng sẽ tiếp tục kết nối bằng mật khẩu cũ trong URL.
+
+### Tài liệu, chia đoạn và retrieval
+
+| Biến | Ý nghĩa | Ghi chú |
+| --- | --- | --- |
+| `RAG_SEED_DATA_PATH` | Thư mục PDF trên **máy host** được Compose mount vào container | Mặc định `./runtime/ocr/output` |
+| `SEED_DATA_PATH` | Đường dẫn tới cùng bộ PDF nhưng nhìn từ **bên trong container** | Giữ `/data/seed_data` khi dùng Compose |
+| `MAX_PDF_SIZE_MB` | Kích thước tối đa của một PDF được ingest | Mặc định `100` MB |
+| `CHUNK_SIZE_CHARS` | Số ký tự mục tiêu của mỗi đoạn văn bản | Mặc định `1800` |
+| `CHUNK_OVERLAP_CHARS` | Phần ký tự chồng lấn giữa hai đoạn liên tiếp | Mặc định `200`; phải nhỏ hơn chunk size |
+| `CHUNK_VERSION` | Phiên bản quy tắc chia đoạn dùng để xác định khi nào cần re-ingest | Chỉ đổi khi thuật toán chunking thực sự thay đổi |
+| `EMBEDDING_MODEL` | Mô hình tạo vector tìm kiếm | Mặc định `BAAI/bge-m3` |
+| `EMBEDDING_DIMENSIONS` | Số chiều vector phải khớp schema pgvector | Giữ `1024` với BGE-M3 và schema hiện tại |
+| `EMBEDDING_BATCH_SIZE` | Số đoạn được embedding trong một batch | Giảm nếu máy thiếu RAM |
+| `RETRIEVAL_TOP_K` | Số đoạn liên quan tối đa được lấy cho một câu hỏi | Mặc định `5` |
+| `RETRIEVAL_MIN_SIMILARITY` | Ngưỡng tương đồng tối thiểu để một đoạn được dùng làm bằng chứng | Tăng sẽ chặt hơn nhưng có thể bỏ sót nguồn |
+| `HF_HOME` | Nơi lưu cache embedding model trong container | Giữ `/models` để tận dụng Docker volume |
+
+Các giá trị chunking, embedding và retrieval ảnh hưởng trực tiếp đến dữ liệu đã lập chỉ mục. Không nên chỉnh chỉ để “thử xem sao” trên database dùng để demo.
+
+### Nhà cung cấp AI
+
+| Biến | Ý nghĩa | Ghi chú |
+| --- | --- | --- |
+| `AI_PROVIDER` | `demo` để kiểm tra đường truyền không gọi AI; `gateway` để dùng provider thật | Chatbot có câu trả lời thật cần `gateway` |
+| `AI_API_BASE_URL` | Endpoint tương thích Anthropic Messages của nhà cung cấp | Lấy đúng URL từ nhà cung cấp |
+| `AI_API_KEY` | Client API key dùng để xác thực | Là secret; không commit hoặc đưa vào ảnh chụp |
+| `AI_AUTH_SCHEME` | Cách gửi key: `bearer` hoặc `x-api-key` | Phải khớp tài liệu của nhà cung cấp |
+| `AI_MODEL` | Tên model mà endpoint hỗ trợ | Không tự đoán tên model |
+| `AI_CONNECT_TIMEOUT_SECONDS` | Thời gian tối đa để thiết lập kết nối | Mặc định `5` giây |
+| `AI_READ_TIMEOUT_SECONDS` | Thời gian tối đa chờ provider trả nội dung | Mặc định `45` giây |
+| `AI_CUSTOM_HEADERS` | Header bổ sung do gateway yêu cầu | Để trống nếu nhà cung cấp không yêu cầu |
+
+Chế độ dựng giao diện và API, không tiêu thụ AI credit:
+
+```dotenv
+AI_PROVIDER=demo
+AI_DEMO_MODE=false
+```
+
+Chế độ chatbot thật:
+
+```dotenv
+AI_PROVIDER=gateway
+AI_DEMO_MODE=false
+AI_API_BASE_URL=https://endpoint-cua-nha-cung-cap.example
+AI_API_KEY=thay_bang_client_api_key
+AI_AUTH_SCHEME=x-api-key
+AI_MODEL=ten_model_duoc_ho_tro
+AI_CUSTOM_HEADERS=
+```
+
+Sau khi đổi cấu hình AI, tạo lại hai container đọc các biến này:
+
+```bash
+docker compose up -d --force-recreate ai-service backend
+```
+
+`AI_PROVIDER=demo` không phải là một chatbot giả để trình diễn nội dung tài chính. Nó chỉ chứng minh đường gọi Backend → AI Service hoạt động và phải trả kết quả không tự tin. Muốn nghiệm thu câu trả lời có nguồn, cần `gateway`, key hợp lệ và dữ liệu RAG đã ingest.
+
+### Frontend
+
+| Biến | Ý nghĩa | Giá trị khi chạy Compose local |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_BASE_URL` | URL mà trình duyệt của người dùng gọi tới Backend | `http://localhost:3001/api/v1` |
+| `API_BASE_URL` | URL mà Next.js gọi Backend từ bên trong mạng Compose | `http://backend:3001/api/v1` |
+
+Hai URL này khác nhau vì trình duyệt hiểu `localhost`, còn container giao tiếp với nhau bằng tên service `backend`.
+
+### Biến chỉ dành cho native hoặc kiểm thử
+
+| Biến | Dùng khi nào? |
+| --- | --- |
+| `JWT_EXPIRES_IN_SECONDS` | Chỉnh thời hạn access token khi chạy Backend native |
+| `PORT` | Đổi cổng Backend native; mặc định `3001` |
+| `TEST_DATABASE_URL` | Integration test trên database dùng một lần; không trỏ vào database phát triển |
+| `EMBEDDING_BASE_URL` | Chỉ dùng nếu thay embedding local bằng một endpoint riêng |
+| `EMBEDDING_API_KEY` | Key của endpoint embedding riêng; để trống với BGE-M3 local |
 
 ## Chạy native trên Windows
 
-WikiStock có thể chạy không cần Docker nếu máy đã có PostgreSQL cùng pgvector, Node.js và Python. Thứ tự khởi động đúng là PostgreSQL → AI Service → Backend → Frontend.
+Chỉ chọn cách này khi máy đã có PostgreSQL cùng `pgvector`, Node.js 22 và Python 3.12 x64. Native không tự tạo database hay tự nối các service như Compose, nên thứ tự phải là:
 
-Hướng dẫn chi tiết, biến môi trường và lệnh kiểm tra nằm trong [Backend V1 Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/BACKEND_V1_RUNBOOK.md).
+```text
+PostgreSQL + pgvector
+  → migration và seed
+  → AI Service
+  → Backend
+  → Frontend
+  → crawler/OCR/ingestion khi cần dữ liệu
+```
 
-Các cổng mặc định khi chạy native:
+Mỗi thành phần dùng file `.env` riêng và `DATABASE_URL` phải trỏ tới `localhost`, không phải hostname `postgres`. Các lệnh cài đặt, bootstrap database và kiểm tra từng service được ghi trong [Backend V1 Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/BACKEND_V1_RUNBOOK.md). Đây là tài liệu chuẩn cho trường hợp không dùng Docker; không nên trộn lẫn biến môi trường native với biến trong Compose.
+
+Các cổng mặc định:
 
 | Dịch vụ | Địa chỉ |
 | --- | --- |
 | Frontend | `http://localhost:3000` |
 | Backend | `http://localhost:3001` |
 | AI Service | `http://localhost:8000` |
-| PostgreSQL | Theo `DATABASE_URL` trong `.env` |
+| PostgreSQL | Theo `DATABASE_URL`, thường là `localhost:5432` |
 
 ## Kiểm tra chất lượng mã nguồn
 
@@ -429,7 +636,7 @@ Repository hiện chưa công bố giấy phép mã nguồn mở. Không mặc �
 
 ## 🙏 Cảm ơn những người đã xây dựng WikiStock
 
-WikiStock không phải dự án mã nguồn mở, nhưng sản phẩm là kết quả từ công sức chung của cả đội. Cảm ơn những thành viên đã trực tiếp tham gia nghiên cứu, thiết kế, phát triển, kiểm thử và vận hành dự án:
+Cảm ơn những thành viên đã trực tiếp tham gia nghiên cứu, thiết kế, phát triển, kiểm thử và vận hành dự án:
 
 <table align="center">
   <tr>
@@ -488,5 +695,5 @@ WikiStock không phải dự án mã nguồn mở, nhưng sản phẩm là kết
 ---
 
 <p align="center">
-  Sản phẩm được phát triển bởi nhóm ULESER cho ATTACKER 2026.
+  Sản phẩm được phát triển bởi nhóm WikiStock cho ATTACKER 2026.
 </p>
