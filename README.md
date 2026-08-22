@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/doantanphong-hcmus/WikiStock/actions?query=workflow%3A%22Release+gates%22+branch%3Adevelop"><img src="https://img.shields.io/badge/CI-release%20gates-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI release gates" /></a>
+  <a href="https://github.com/doantanphong-hcmus/WikiStock/actions?query=workflow%3A%22Release+gates%22+branch%3Amain"><img src="https://img.shields.io/badge/CI-release%20gates-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI release gates" /></a>
   <img src="https://img.shields.io/badge/Node.js-22-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js 22" />
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" />
   <img src="https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <sub>ATTACKER 2026 · WikiStock hiện được phát triển và tích hợp trên nhánh <a href="https://github.com/doantanphong-hcmus/WikiStock/tree/develop"><code>develop</code></a>.</sub>
+  <sub>ATTACKER 2026 · Mã nguồn chạy và tài liệu mới nhất của WikiStock được duy trì trên nhánh <a href="https://github.com/doantanphong-hcmus/WikiStock/tree/main"><code>main</code></a>.</sub>
 </p>
 
 ## Lời cảm ơn
@@ -53,7 +53,7 @@
   </tr>
 </table>
 
-Nhóm trân trọng cảm ơn **giảng viên hướng dẫn** đã đồng hành bằng những phản biện về dữ liệu, tài chính, tính khả thi và trách nhiệm khi đưa AI vào một sản phẩm hỗ trợ tra cứu doanh nghiệp.
+Nhóm trân trọng cảm ơn **giảng viên hướng dẫn, ThS. Nguyễn Hữu Toàn — giảng viên Khoa Toán, Trường Đại học Khoa học Tự nhiên, ĐHQG-TP.HCM** đã đồng hành bằng những phản biện về dữ liệu, tài chính, tính khả thi và trách nhiệm khi đưa AI vào một sản phẩm hỗ trợ tra cứu doanh nghiệp.
 
 WikiStock được hình thành trong môi trường học tập và đổi mới sáng tạo của **Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM** và **Trường Đại học Kinh tế - Luật, ĐHQG-HCM**. Nhóm cũng cảm ơn **Ban Tổ chức ATTACKER 2026** đã tạo cơ hội để dự án được đánh giá như một sản phẩm thực tế thay vì chỉ dừng ở phạm vi bài tập.
 
@@ -158,8 +158,8 @@ WikiStock chỉ công bố những chỉ số đã đạt ngưỡng trên bộ k
 
 ### Phương pháp và khả năng tái lập
 
-- Benchmark RSS dùng **exact-set accuracy**: kết quả chỉ được tính đúng khi toàn bộ danh sách doanh nghiệp dự đoán trùng khớp với đáp án, không thừa và không thiếu. Bộ dữ liệu gồm [43 tình huống công khai](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/crawler/tests/fixtures/rss_match_cases.json).
-- Benchmark RAG dùng [20 câu hỏi đánh giá](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/ai-service/tests/fixtures/rag_evaluation.json). Chỉ số từ chối và thời gian truy xuất ở trên lấy từ [lần chạy live provider ngày 16/08/2026](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/ai-service/reports/rag_evaluation_live.json), không lấy từ mock hoặc chế độ demo.
+- Benchmark RSS dùng **exact-set accuracy**: kết quả chỉ được tính đúng khi toàn bộ danh sách doanh nghiệp dự đoán trùng khớp với đáp án, không thừa và không thiếu. Bộ dữ liệu gồm [43 tình huống công khai](https://github.com/doantanphong-hcmus/WikiStock/blob/main/crawler/tests/fixtures/rss_match_cases.json).
+- Benchmark RAG dùng [20 câu hỏi đánh giá](https://github.com/doantanphong-hcmus/WikiStock/blob/main/ai-service/tests/fixtures/rag_evaluation.json). Chỉ số từ chối và thời gian truy xuất ở trên lấy từ [lần chạy live provider ngày 16/08/2026](https://github.com/doantanphong-hcmus/WikiStock/blob/main/ai-service/reports/rag_evaluation_live.json), không lấy từ mock hoặc chế độ demo.
 - Cold start được tách khỏi p95 để không trộn thời gian nạp mô hình với độ trễ của các lượt truy vấn đã sẵn sàng phục vụ.
 
 ```bash
@@ -172,7 +172,7 @@ cd ../ai-service
 python -m app.evaluation --live-provider --output reports/rag_evaluation_live
 ```
 
-> Benchmark này chỉ đại diện cho những lớp đã đạt ngưỡng, không được diễn giải thành “AI chính xác 100%”. Các chỉ số sinh câu trả lời và citation chưa đạt điều kiện phát hành vẫn được công khai trong [Rủi ro độ tin cậy AI sau R8](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/R8_POST_EVALUATION_RISK.md), thay vì bị trộn vào một điểm tổng hợp có thể gây hiểu lầm.
+> Benchmark này chỉ đại diện cho những lớp đã đạt ngưỡng, không được diễn giải thành “AI chính xác 100%”. Các chỉ số sinh câu trả lời và citation chưa đạt điều kiện phát hành vẫn được công khai trong [Rủi ro độ tin cậy AI sau R8](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/R8_POST_EVALUATION_RISK.md), thay vì bị trộn vào một điểm tổng hợp có thể gây hiểu lầm.
 
 ## Kiến trúc hệ thống
 
@@ -243,7 +243,7 @@ Backend là điểm kiểm soát quyền truy cập và hợp đồng API. AI Se
 └── README.md
 ```
 
-> Nhánh `main` hiện đóng vai trò trang giới thiệu. Bản tích hợp end-to-end mới nhất nằm ở `develop` cho đến khi nhóm tạo bản phát hành ổn định.
+> Nhánh `main` là nguồn chính thức để clone, cài đặt và chạy phiên bản WikiStock hiện tại.
 
 ## Bắt đầu từ một bản clone sạch
 
@@ -264,6 +264,7 @@ Docker Compose là đường chạy được khuyến nghị vì nó dựng sẵ
 | Git | Tải mã nguồn và chuyển nhánh | Luôn cần |
 | Docker Engine và Docker Compose V2 | Chạy toàn bộ hệ thống | Cần cho cách chạy khuyến nghị |
 | Khoảng 8 GB RAM trống | Chạy các container và embedding model BGE-M3 | Cần nếu nạp dữ liệu RAG |
+| Node.js 22 | Cài và chạy Backend/Frontend | Chỉ cần khi chạy native, Docker đã có Node trong image |
 | Python 3.12 x64 | Chạy crawler và OCR trên máy host | Chỉ cần khi nạp/cập nhật dữ liệu |
 | Client API key | Gọi mô hình AI thật | Chỉ cần khi kiểm thử chatbot online |
 
@@ -275,21 +276,37 @@ docker --version
 docker compose version
 ```
 
-### Bước 1 — Clone đúng nhánh có ứng dụng
+### Các file cài thư viện nằm ở đâu?
+
+WikiStock gồm nhiều ứng dụng nên không dùng một `requirements.txt` chung cho toàn repository. Mỗi thành phần chỉ cài đúng thư viện nó cần:
+
+| Thành phần | File dependency | Nội dung chính |
+| --- | --- | --- |
+| AI Service | `ai-service/requirements.txt` | FastAPI, PostgreSQL/pgvector, đọc PDF và BGE-M3 |
+| Crawler | `crawler/requirements.txt` | VNStock, RSS, pandas và PostgreSQL |
+| Backend | `backend/package-lock.json` | NestJS, Prisma, xác thực và API |
+| Frontend | `frontend/package-lock.json` | Next.js, React và giao diện |
+
+Nếu chạy bằng Docker, các Dockerfile tự đọc bốn file này trong lúc build. **Không cần tạo `venv`, không cần chạy `pip install` và không cần chạy `npm install` trên máy host.**
+
+Nếu chạy native, sử dụng đúng khối lệnh tại mục [Chạy native trên Windows](#chạy-native-trên-windows). Khối đó tạo một `venv` dùng chung và cài toàn bộ dependency Python lẫn Node trong một lượt.
+
+### Bước 1 — Clone nhánh `main`
 
 ```bash
 git clone https://github.com/doantanphong-hcmus/WikiStock.git
 cd WikiStock
-git switch develop
+git switch main
+git pull --ff-only origin main
 ```
 
-Hiện tại `develop` là nhánh tích hợp chứa mã nguồn có thể chạy của Frontend, Backend, AI Service và crawler. Nếu chỉ clone rồi đứng ở `main`, nội dung nhìn thấy có thể chưa phản ánh bản phát triển mới nhất. Có thể kiểm tra lại bằng:
+`main` chứa phiên bản chính thức dùng để cài đặt và chạy Frontend, Backend, AI Service cùng crawler. Có thể kiểm tra lại nhánh hiện tại bằng:
 
 ```bash
 git branch --show-current
 ```
 
-Kết quả mong đợi là `develop`.
+Kết quả mong đợi là `main`.
 
 ### Bước 2 — Tạo `.env` và secret local
 
@@ -383,20 +400,20 @@ py -3.12 -m venv .venv
 cd ..
 ```
 
-Nên nghiệm thu một doanh nghiệp trước. Khi FPT chạy đúng, dùng `main.py` không có `--ticker` để chạy danh sách demo. Crawler phụ thuộc dịch vụ bên ngoài nên một nguồn tạm lỗi không đồng nghĩa Backend hoặc database bị lỗi. Xem thêm [hướng dẫn crawler](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/crawler/README.md).
+Nên nghiệm thu một doanh nghiệp trước. Khi FPT chạy đúng, dùng `main.py` không có `--ticker` để chạy danh sách demo. Crawler phụ thuộc dịch vụ bên ngoài nên một nguồn tạm lỗi không đồng nghĩa Backend hoặc database bị lỗi. Xem thêm [hướng dẫn crawler](https://github.com/doantanphong-hcmus/WikiStock/blob/main/crawler/README.md).
 
 #### Chuẩn bị và nạp báo cáo cho RAG
 
 Repository lưu 12 PDF nguồn của FPT, GAS, HPG và HSG trong `docs/Seed_Daa`. Đầu ra OCR tại `runtime/ocr/output` là dữ liệu sinh ra trên máy chạy và không được Git lưu lại. Vì vậy, người clone mới cần tạo output OCR trước khi ingest đầy đủ.
 
-Sau khi hoàn thành bước OCR theo [OCR Preprocessing](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/OCR_PREPROCESSING.md), kiểm tra và nạp PDF:
+Sau khi hoàn thành bước OCR theo [OCR Preprocessing](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/OCR_PREPROCESSING.md), kiểm tra và nạp PDF:
 
 ```bash
 docker compose run --rm ai-service python -m app.ingestion scan --dry-run
 docker compose run --rm ai-service python -m app.ingestion scan
 ```
 
-Với bộ dữ liệu chuẩn, dry-run phải tìm thấy `12` tài liệu, `12` tài liệu sẵn sàng và `0` lỗi. Lệnh ingest tạo embedding local nên không tiêu thụ API credit, nhưng lần đầu có thể mất thời gian tải BGE-M3. Quy trình nghiệm thu đầy đủ nằm trong [RAG Operations Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/RAG_OPERATIONS_RUNBOOK.md).
+Với bộ dữ liệu chuẩn, dry-run phải tìm thấy `12` tài liệu, `12` tài liệu sẵn sàng và `0` lỗi. Lệnh ingest tạo embedding local nên không tiêu thụ API credit, nhưng lần đầu có thể mất thời gian tải BGE-M3. Quy trình nghiệm thu đầy đủ nằm trong [RAG Operations Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/RAG_OPERATIONS_RUNBOOK.md).
 
 ### Bước 6 — Mở ứng dụng như người dùng mới
 
@@ -522,7 +539,139 @@ Hai URL này khác nhau vì trình duyệt hiểu `localhost`, còn container gi
 
 ## Chạy native trên Windows
 
-Chỉ chọn cách này khi máy đã có PostgreSQL cùng `pgvector`, Node.js 22 và Python 3.12 x64. Native không tự tạo database hay tự nối các service như Compose, nên thứ tự phải là:
+Chỉ chọn cách này khi không thể dùng Docker. Máy phải cài sẵn:
+
+- Node.js 22.
+- Python 3.12 x64.
+- PostgreSQL cùng extension `pgvector`.
+
+Nếu chưa có PostgreSQL hoặc `pgvector`, hãy dùng Docker Compose ở phần trên. Hai thành phần hệ thống này không nên được một script dự án tự ý cài vào Windows.
+
+### 1. Kiểm tra đúng phiên bản
+
+Mở PowerShell tại thư mục gốc `WikiStock`:
+
+```powershell
+node --version
+npm --version
+py -3.12 --version
+psql --version
+```
+
+Nếu một lệnh không tồn tại, dừng lại và cài đúng công cụ đó trước. Không tiếp tục bằng một phiên bản Python hoặc Node khác rồi xử lý lỗi dependency về sau.
+
+### 2. Cài toàn bộ thư viện trong một lượt
+
+Sao chép nguyên khối dưới đây vào PowerShell. Dự án dùng một `venv` tại thư mục gốc; không cần tạo thêm `venv` trong `crawler` hoặc `ai-service`.
+
+```powershell
+# Tạo và kích hoạt môi trường Python dùng chung.
+py -3.12 -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+
+# Cập nhật pip và cài thư viện cho cả AI Service lẫn Crawler.
+python -m pip install --upgrade pip
+python -m pip install `
+  -r ai-service\requirements.txt `
+  -r crawler\requirements.txt
+
+# Cài dependency và tạo Prisma Client cho Backend.
+Push-Location backend
+npm ci
+npx prisma generate
+Pop-Location
+
+# Cài dependency cho Frontend.
+Push-Location frontend
+npm ci
+Pop-Location
+```
+
+`npm ci` được dùng thay cho `npm install` vì nó cài đúng phiên bản đã khóa trong `package-lock.json`, giúp các máy có môi trường giống nhau.
+
+### 3. Tạo bốn file cấu hình local
+
+```powershell
+Copy-Item backend\.env.example backend\.env
+Copy-Item ai-service\.env.example ai-service\.env
+Copy-Item frontend\.env.example frontend\.env.local
+Copy-Item crawler\.env.example crawler\.env
+```
+
+Tạo `JWT_SECRET` tương thích cả Windows PowerShell cũ:
+
+```powershell
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$jwtSecret = [BitConverter]::ToString($bytes).Replace('-', '').ToLowerInvariant()
+$rng.Dispose()
+$jwtSecret
+```
+
+Mở `backend/.env`, thay `JWT_SECRET` bằng chuỗi vừa in ra. Sau đó kiểm tra:
+
+```dotenv
+# backend/.env
+DATABASE_URL=postgresql://app_user:app_password@localhost:5432/app_db
+AI_SERVICE_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3000
+
+# ai-service/.env và crawler/.env
+DATABASE_URL=postgresql://app_user:app_password@localhost:5432/app_db
+
+# frontend/.env.local
+API_BASE_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api/v1
+```
+
+Thay tài khoản, mật khẩu và tên database nếu PostgreSQL trên máy dùng giá trị khác. Mọi URL native đều dùng `localhost`; không dùng hostname `postgres` hoặc `backend` dành cho mạng Docker.
+
+### 4. Khởi tạo database
+
+Khi PostgreSQL đã chạy và `DATABASE_URL` trong `backend/.env` kết nối được:
+
+```powershell
+Push-Location backend
+npm run db:bootstrap
+Pop-Location
+```
+
+Lệnh này chạy migration, seed danh mục ban đầu và kiểm tra schema. Chỉ chuyển sang bước tiếp theo khi lệnh kết thúc thành công.
+
+### 5. Mở bốn terminal để chạy hệ thống
+
+Terminal 1 — AI Service:
+
+```powershell
+cd ai-service
+..\.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+Terminal 2 — Backend:
+
+```powershell
+cd backend
+npm run start:dev
+```
+
+Terminal 3 — Frontend:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Terminal 4 chỉ cần khi muốn nạp dữ liệu:
+
+```powershell
+cd crawler
+..\.venv\Scripts\python.exe check_requirements.py
+..\.venv\Scripts\python.exe main.py --ticker FPT
+```
+
+Thứ tự khởi động đầy đủ là:
 
 ```text
 PostgreSQL + pgvector
@@ -533,7 +682,15 @@ PostgreSQL + pgvector
   → crawler/OCR/ingestion khi cần dữ liệu
 ```
 
-Mỗi thành phần dùng file `.env` riêng và `DATABASE_URL` phải trỏ tới `localhost`, không phải hostname `postgres`. Các lệnh cài đặt, bootstrap database và kiểm tra từng service được ghi trong [Backend V1 Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/BACKEND_V1_RUNBOOK.md). Đây là tài liệu chuẩn cho trường hợp không dùng Docker; không nên trộn lẫn biến môi trường native với biến trong Compose.
+### 6. Xác nhận trước khi mở giao diện
+
+```powershell
+Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod http://localhost:3001/api/health
+Start-Process http://localhost:3000
+```
+
+Chỉ khi cả hai health check phản hồi thành công mới xem việc cài đặt đã hoàn tất. Nếu cần xử lý lỗi PostgreSQL, `pgvector`, OCR hoặc RAG, làm theo [Backend V1 Runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/BACKEND_V1_RUNBOOK.md).
 
 Các cổng mặc định:
 
@@ -546,7 +703,7 @@ Các cổng mặc định:
 
 ## Kiểm tra chất lượng mã nguồn
 
-GitHub Actions kiểm tra Backend, PostgreSQL integration, AI Service, Crawler, Frontend và quá trình build container trên pull request vào `develop` hoặc `main`.
+GitHub Actions kiểm tra Backend, PostgreSQL integration, AI Service, Crawler, Frontend và quá trình build container trước khi thay đổi được đưa vào `main`.
 
 ### Backend
 
@@ -597,14 +754,14 @@ npm run build
 
 ## Tài liệu vận hành
 
-- [API contract](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/API_CONTRACT.md)
-- [AI streaming contract](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/AI_STREAMING_CONTRACT.md)
-- [Checklist demo chatbot](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/CHAT_CUSTOMER_DEMO_CHECKLIST.md)
-- [Backend V1 runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/BACKEND_V1_RUNBOOK.md)
-- [RAG operations runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/RAG_OPERATIONS_RUNBOOK.md)
-- [RSS news operations runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/RSS_NEWS_OPERATIONS_RUNBOOK.md)
-- [Giới hạn đã biết của RAG](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/RAG_KNOWN_LIMITATIONS.md)
-- [Cổng kiểm tra trước khi phát hành](https://github.com/doantanphong-hcmus/WikiStock/blob/develop/docs/CI_RELEASE_GATES.md)
+- [API contract](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/API_CONTRACT.md)
+- [AI streaming contract](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/AI_STREAMING_CONTRACT.md)
+- [Checklist demo chatbot](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/CHAT_CUSTOMER_DEMO_CHECKLIST.md)
+- [Backend V1 runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/BACKEND_V1_RUNBOOK.md)
+- [RAG operations runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/RAG_OPERATIONS_RUNBOOK.md)
+- [RSS news operations runbook](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/RSS_NEWS_OPERATIONS_RUNBOOK.md)
+- [Giới hạn đã biết của RAG](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/RAG_KNOWN_LIMITATIONS.md)
+- [Cổng kiểm tra trước khi phát hành](https://github.com/doantanphong-hcmus/WikiStock/blob/main/docs/CI_RELEASE_GATES.md)
 
 ## Đội ngũ phát triển
 
